@@ -75,14 +75,20 @@ with col_input:
         mq_ampliamento = st.number_input("9. IN CASO DI AMPLIAMENTO (Solo se Esterna = C): Quanti Mq sono stati aggiunti?", min_value=0, value=0, step=1)
          
     # Domanda 11 prezzo di vendita 
-        st.markdown("---")
-    st.markdown("""
-        <div style='background-color: #E1F5FE; padding: 15px; border-radius: 8px; border: 1px solid #81D4FA; margin-bottom: 5px;'>
-            <p style='color: #01579B; margin: 0; font-weight: bold;'>11. (Solo a fini statistici)</p>
-            <h4 style='color: #0277BD; margin: 0;'>QUALE È IL PREZZO DI VENDITA IPOTIZZATO?</h4>
-        </div>
-    """, unsafe_allow_html=True)
-    prezzo_vendita = st.number_input("Prezzo di vendita", min_value=0, value=150000, step=1000, label_visibility="collapsed")
+ st.markdown("---")
+    col_testo_11, col_input_11 = st.columns([2.5, 1])
+    
+    with col_testo_11:
+        st.markdown("""
+            <div style='background-color: #E1F5FE; padding: 9px 12px; border-radius: 5px; border: 1px solid #81D4FA;'>
+                <p style='color: #0277BD; margin: 0; font-size: 14px; font-weight: 600;'>
+                    11. Solo a fini statistici. QUALE È IL PREZZO DI VENDITA IPOTIZZATO?
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with col_input_11:
+        prezzo_vendita = st.number_input("Prezzo di vendita", min_value=0, value=150000, step=1000, label_visibility="collapsed")
 
 # ---- MOTORE DI CALCOLO LATO BACKEND ----
 is_pdc = esterna.startswith("C")
@@ -191,8 +197,11 @@ with col_output:
         </div>
     """, unsafe_allow_html=True)
     
+ # Spazio per staccare il blocco
+    st.write("")
+    st.write("")
+
     # --- INCIDENZA SUL PREZZO DI VENDITA ---
     incidenza_perc = (totale_chiavi_in_mano / prezzo_vendita) * 100 if prezzo_vendita > 0 else 0
-   
-    st.caption("STATISTICA OPERAZIONE IMMOBILIARE")
+    st.markdown("**STATISTICA OPERAZIONE IMMOBILIARE**")
     st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
