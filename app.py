@@ -75,7 +75,14 @@ with col_input:
         mq_ampliamento = st.number_input("9. IN CASO DI AMPLIAMENTO (Solo se Esterna = C): Quanti Mq sono stati aggiunti?", min_value=0, value=0, step=1)
          
     # Domanda 11 prezzo di vendita 
-         prezzo_vendita = st.number_input("11. solo a fini statistici. QUALE E' IL PREZZO DI VENDITA IPOTIZZATO?", min_value=0, value=150000, step=1000)
+        st.markdown("---")
+    st.markdown("""
+        <div style='background-color: #E1F5FE; padding: 15px; border-radius: 8px; border: 1px solid #81D4FA; margin-bottom: 5px;'>
+            <p style='color: #01579B; margin: 0; font-weight: bold;'>11. (Solo a fini statistici)</p>
+            <h4 style='color: #0277BD; margin: 0;'>QUALE È IL PREZZO DI VENDITA IPOTIZZATO?</h4>
+        </div>
+    """, unsafe_allow_html=True)
+    prezzo_vendita = st.number_input("Prezzo di vendita", min_value=0, value=150000, step=1000, label_visibility="collapsed")
 
 # ---- MOTORE DI CALCOLO LATO BACKEND ----
 is_pdc = esterna.startswith("C")
