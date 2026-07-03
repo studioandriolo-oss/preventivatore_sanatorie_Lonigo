@@ -67,13 +67,14 @@ with col_input:
         dico = st.radio("4. SONO PRESENTI LE CERTIFICAZIONI DEGLI IMPIANTI (DICO)?", ["SI", "NO", "NON LO SO"])
         unita = st.number_input("6. NUMERO DI UNITÀ IMMOBILIARI COINVOLTE (Da aggiornare al Catasto):", min_value=1, value=1)
         deroga = st.radio("8. I LOCALI HANNO ALTEZZE < 2,70m O SUPERFICI RIDOTTE (Deroghe Salva Casa)?", ["NO", "SI"])
-        prezzo_vendita = st.number_input("11. solo a fini statistici. QUALE E' IL PREZZO DI VENDITA IPOTIZZATO?", min_value=0, value=150000, step=1000)
-
+       
     # Domanda 9 condizionale
     mq_ampliamento = 0
     if esterna.startswith("C"):
         st.markdown("---")
         mq_ampliamento = st.number_input("9. IN CASO DI AMPLIAMENTO (Solo se Esterna = C): Quanti Mq sono stati aggiunti?", min_value=0, value=0, step=1)
+
+ prezzo_vendita = st.number_input("11. solo a fini statistici. QUALE E' IL PREZZO DI VENDITA IPOTIZZATO?", min_value=0, value=150000, step=1000)
 
 # ---- MOTORE DI CALCOLO LATO BACKEND ----
 is_pdc = esterna.startswith("C")
@@ -184,5 +185,6 @@ with col_output:
     
     # --- INCIDENZA SUL PREZZO DI VENDITA ---
     incidenza_perc = (totale_chiavi_in_mano / prezzo_vendita) * 100 if prezzo_vendita > 0 else 0
+   
     st.caption("STATISTICA OPERAZIONE IMMOBILIARE")
     st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
