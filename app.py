@@ -91,8 +91,6 @@ with col_input:
         prezzo_vendita = st.number_input("Prezzo di vendita", min_value=0, value=150000, step=1000, label_visibility="collapsed")
 
 # ---- MOTORE DI CALCOLO LATO BACKEND ----
-
-# ---- MOTORE DI CALCOLO LATO BACKEND ----
 is_pdc = esterna.startswith("C")
 is_scia = not is_pdc and (interna.startswith("D") or esterna.startswith("B"))
 is_cila = not is_pdc and not is_scia
