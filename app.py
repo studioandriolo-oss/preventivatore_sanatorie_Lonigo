@@ -68,14 +68,14 @@ with col_input:
         unita = st.number_input("6. NUMERO DI UNITÀ IMMOBILIARI COINVOLTE (Da aggiornare al Catasto):", min_value=1, value=1)
         deroga = st.radio("8. I LOCALI HANNO ALTEZZE < 2,70m O SUPERFICI RIDOTTE (Deroghe Salva Casa)?", ["NO", "SI"])
        
-    # Domanda 9 condizionale
+  # Domanda 9 condizionale
     mq_ampliamento = 0
     if esterna.startswith("C"):
         st.markdown("---")
         mq_ampliamento = st.number_input("9. IN CASO DI AMPLIAMENTO (Solo se Esterna = C): Quanti Mq sono stati aggiunti?", min_value=0, value=0, step=1)
-         
-    # Domanda 11 prezzo di vendita 
- st.markdown("---")
+
+    # --- NUOVO BLOCCO DOMANDA 11 ---
+    st.markdown("---")
     col_testo_11, col_input_11 = st.columns([2.5, 1])
     
     with col_testo_11:
@@ -89,6 +89,8 @@ with col_input:
         
     with col_input_11:
         prezzo_vendita = st.number_input("Prezzo di vendita", min_value=0, value=150000, step=1000, label_visibility="collapsed")
+
+# ---- MOTORE DI CALCOLO LATO BACKEND ----
 
 # ---- MOTORE DI CALCOLO LATO BACKEND ----
 is_pdc = esterna.startswith("C")
