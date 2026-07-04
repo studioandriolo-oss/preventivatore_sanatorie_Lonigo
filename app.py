@@ -300,7 +300,7 @@ if condividi:
         risposta_captcha = st.text_input("Inserisci il risultato numerico per sbloccare l'invio:")
         somma_corretta = str(st.session_state.captcha_a + st.session_state.captcha_b)
 
-    inviato = st.form_submit_button("Invia Pratica all'architetto")
+        inviato = st.form_submit_button("Invia Pratica all'architetto")
         
         if inviato:
             # 1. CONTROLLO CAMPI OBBLIGATORI
@@ -357,7 +357,7 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
                         for f in altri_file:
                             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
                             
-                # 2. RICHIAMO DELLA PASSWORD PROTETTA tramite st.secrets
+                    # 2. RICHIAMO DELLA PASSWORD PROTETTA tramite st.secrets
                     MAIL_PASSWORD = st.secrets["MAIL_PASSWORD"] 
                     
                     with smtplib.SMTP("smtp.gmail.com", 587) as server:
