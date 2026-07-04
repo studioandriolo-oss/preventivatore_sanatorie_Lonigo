@@ -254,9 +254,15 @@ if condividi:
         note = st.text_area("NOTE")
         
         st.markdown("---")
-        # Captcha semplice di verifica umana
-        captcha = st.text_input("Verifica sicurezza: Digita 'confermo' in minuscolo per abilitare l'invio")
-        
+      # --- CAPTCHA ANTI-ROBOT ---
+if 'captcha_a' not in st.session_state:
+    st.session_state.captcha_a = random.randint(1, 9)
+    st.session_state.captcha_b = random.randint(1, 9)
+
+st.write(f"🤖 **Controllo Anti-Spam: quanto fa {st.session_state.captcha_a} + {st.session_state.captcha_b}?**")
+risposta_captcha = st.text_input("Inserisci il risultato numerico per sbloccare l'invio:")
+somma_corretta = str(st.session_state.captcha_a + st.session_state.captcha_b)
+   
         inviato = st.form_submit_button("Invia Pratica all'architetto")
         
         if inviato:
