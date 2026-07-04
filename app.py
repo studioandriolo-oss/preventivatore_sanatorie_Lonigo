@@ -318,16 +318,21 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
                         for f in altri_file:
                             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
                             
-                    # Invio tramite server SMTP di Google
+      # Invio tramite server SMTP di Google
                     PASSWORD_APP = "INSERISCI_QUI_LA_TUA_PASSWORD_PER_LE_APP" 
                     
-                    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                    # CAMBIO METODO DI CONNESSIONE: Da 465 (SSL) a 587 (STARTTLS)
+                    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                        server.ehlo() # Saluta il server
+                        server.starttls() # Attiva la crittografia di sicurezza
                         server.login("studioandriolo@gmail.com", PASSWORD_APP)
                         server.send_message(msg)
                         
                     st.success("✅ Dati inviati con successo allo Studio! Verrai ricontattato a breve.")
                 
+                except smtplib.SMTPAuthenticationError:
+                    st.error("❌ Errore 535: Google rifiuta ancora le credenziali. Assicurati che PASSWORD_APP non abbia spazi intermedi (es. 'abcdefghijklmnop' e non 'abcd efgh...').")
                 except Exception as e:
-                    st.error(f"❌ Si è verificato un errore durante l'invio: {e}")
+                    st.error(f"❌ Si è verificato un errore generico durante l'invio: {e}")
             else:
                 st.error("⚠️ Verifica sicurezza fallita: il risultato della somma non è corretto.")
