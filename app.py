@@ -378,9 +378,14 @@ if condividi:
         subalterno = c3.text_input("Subalterno")
         
         st.markdown("**DOCUMENTI E FOTO ALLEGATE**")
-        doc_id = st.file_uploader("📂 Carica Planimetrie o Carta d'Identità", type=["pdf", "jpg", "png"], accept_multiple_files=True)
         
-        # --- NUOVO COMANDO: FOTOCAMERA SMARTPHONE ---
+        # 1. Documenti proprietario
+        doc_id = st.file_uploader("📂 CARICA documenti del proprietario (Carta d'Identità, Codice Fiscale)", type=["pdf", "jpg", "png"], accept_multiple_files=True)
+        
+        # 2. Altri documenti
+        altri_file = st.file_uploader("📂 CARICA altri documenti (Planimetrie, Visure, Foto precedenti)", type=["pdf", "jpg", "png"], accept_multiple_files=True)
+        
+        # 3. Fotocamera integrata
         st.write("📷 **Scatta foto direttamente sul posto** (Solo da Smartphone/Tablet)")
         foto_abuso = st.camera_input("Inquadra l'abuso o la difformità e scatta", label_visibility="collapsed")
         
@@ -445,9 +450,14 @@ Costo Totale Lordo: {totale_chiavi_in_mano:,.2f} Euro
 """
                     msg.set_content(body)
                     
-                    # Gestione file caricati normalmente
+                    # Gestione file caricati (Documenti Proprietario)
                     if doc_id:
                         for f in doc_id:
+                            msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
+                            
+                    # Gestione file caricati (Altri Documenti)
+                    if altri_file:
+                        for f in altri_file:
                             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
                             
                     # Gestione Foto scattata al momento
