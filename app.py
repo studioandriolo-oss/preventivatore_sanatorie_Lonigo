@@ -377,17 +377,13 @@ if condividi:
         mappale = c2.text_input("Mappale")
         subalterno = c3.text_input("Subalterno")
         
-        st.markdown("**DOCUMENTI E FOTO ALLEGATE**")
+        st.markdown("**DOCUMENTI ALLEGATI**")
         
         # 1. Documenti proprietario
         doc_id = st.file_uploader("📂 CARICA documenti del proprietario (Carta d'Identità, Codice Fiscale)", type=["pdf", "jpg", "png"], accept_multiple_files=True)
         
         # 2. Altri documenti
         altri_file = st.file_uploader("📂 CARICA altri documenti (Planimetrie, Visure, Foto precedenti)", type=["pdf", "jpg", "png"], accept_multiple_files=True)
-        
-        # 3. Fotocamera integrata
-        st.write("📷 **Scatta foto direttamente sul posto** (Solo da Smartphone/Tablet)")
-        foto_abuso = st.camera_input("Inquadra l'abuso o la difformità e scatta", label_visibility="collapsed")
         
         note = st.text_area("NOTE PER LO STUDIO")
         
@@ -460,10 +456,6 @@ Costo Totale Lordo: {totale_chiavi_in_mano:,.2f} Euro
                         for f in altri_file:
                             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
                             
-                    # Gestione Foto scattata al momento
-                    if foto_abuso:
-                        msg.add_attachment(foto_abuso.read(), maintype='image', subtype='jpeg', filename="Foto_Sopralluogo_App.jpg")
-                            
                     MAIL_PASSWORD = st.secrets["MAIL_PASSWORD"] 
                     
                     with smtplib.SMTP("smtp.gmail.com", 587) as server:
@@ -471,7 +463,7 @@ Costo Totale Lordo: {totale_chiavi_in_mano:,.2f} Euro
                         server.login("studioandriolo@gmail.com", MAIL_PASSWORD)
                         server.send_message(msg)
                         
-                    st.success("✅ Dati e foto inviati con successo allo Studio! Verrai ricontattato a breve.")
+                    st.success("✅ Dati e documenti inviati con successo allo Studio! Verrai ricontattato a breve.")
                     
                     st.session_state.captcha_a = random.randint(1, 9)
                     st.session_state.captcha_b = random.randint(1, 9)
