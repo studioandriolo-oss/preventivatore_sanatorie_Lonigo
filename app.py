@@ -357,13 +357,12 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
                         for f in altri_file:
                             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
                             
-                    # 2. RICHIAMO DELLA PASSWORD PROTETTA tramite st.secrets
-                    PASSWORD_APP = st.secrets["EMAIL_PASSWORD"] 
+                # 2. RICHIAMO DELLA PASSWORD PROTETTA tramite st.secrets
+                    MAIL_PASSWORD = st.secrets["MAIL_PASSWORD"] 
                     
                     with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                        server.ehlo()
                         server.starttls()
-                        server.login("studioandriolo@gmail.com", PASSWORD_APP)
+                        server.login("studioandriolo@gmail.com", MAIL_PASSWORD)
                         server.send_message(msg)
                         
                     st.success("✅ Dati inviati con successo allo Studio! Verrai ricontattato a breve.")
