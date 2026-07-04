@@ -299,11 +299,14 @@ if condividi:
         st.write(f"🤖 **Controllo Anti-Spam: quanto fa {st.session_state.captcha_a} + {st.session_state.captcha_b}?**")
         risposta_captcha = st.text_input("Inserisci il risultato numerico per sbloccare l'invio:")
         somma_corretta = str(st.session_state.captcha_a + st.session_state.captcha_b)
-        
-        inviato = st.form_submit_button("Invia Pratica all'architetto")
+
+    inviato = st.form_submit_button("Invia Pratica all'architetto")
         
         if inviato:
-            if risposta_captcha.strip() == somma_corretta:
+            # 1. CONTROLLO CAMPI OBBLIGATORI
+            if not agente or not email_agente:
+                st.error("⚠️ Attenzione: Inserisci almeno il Nome dell'Agente e la Mail prima di inviare.")
+            elif risposta_captcha.strip() == somma_corretta:
                 try:
                     # Costruzione dell'email
                     msg = EmailMessage()
@@ -354,8 +357,8 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
                         for f in altri_file:
                             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
                             
-                    # Invio tramite server SMTP di Google sulla porta 587 (STARTTLS)
-                    PASSWORD_APP = "churcvfggqwhdaqz" 
+                    # 2. RICHIAMO DELLA PASSWORD PROTETTA tramite st.secrets
+                    PASSWORD_APP = st.secrets["EMAIL_PASSWORD"] 
                     
                     with smtplib.SMTP("smtp.gmail.com", 587) as server:
                         server.ehlo()
@@ -364,9 +367,13 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
                         server.send_message(msg)
                         
                     st.success("✅ Dati inviati con successo allo Studio! Verrai ricontattato a breve.")
+                    
+                    # 3. RESET DEL CAPTCHA (Per svuotare il modulo per il prossimo invio)
+                    st.session_state.captcha_a = random.randint(1, 9)
+                    st.session_state.captcha_b = random.randint(1, 9)
                 
                 except smtplib.SMTPAuthenticationError:
-                    st.error("❌ Errore di Autenticazione: Google rifiuta le credenziali. Controlla che PASSWORD_APP sia corretta e senza spazi.")
+                    st.error("❌ Errore di Autenticazione: Google rifiuta le credenziali. Controlla il file secrets.toml.")
                 except Exception as e:
                     st.error(f"❌ Si è verificato un errore generico durante l'invio: {e}")
             else:
