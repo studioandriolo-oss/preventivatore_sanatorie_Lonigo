@@ -188,7 +188,6 @@ def genera_pdf():
     pdf.cell(0, 8, "1. STATO DI FATTO DICHIARATO", ln=True)
     pdf.set_font("Arial", '', 10)
     
-    # Usa multi_cell per le frasi lunghe (Situazione Interna ed Esterna)
     pdf.set_font("Arial", 'B', 10)
     pdf.cell(35, 6, "Sit. Interna:", border=0)
     pdf.set_font("Arial", '', 10)
@@ -200,7 +199,6 @@ def genera_pdf():
     pdf.multi_cell(0, 6, f"{esterna}")
     pdf.ln(2)
     
-    # Griglia a due colonne per le risposte brevi
     pdf.cell(95, 6, f"Superficie Immobile: {superficie} Mq", border=0)
     pdf.cell(95, 6, f"Unita' Coinvolte: {unita}", ln=True)
     
@@ -254,13 +252,13 @@ def genera_pdf():
     pdf.cell(0, 10, f"{totale_chiavi_in_mano:,.2f} Euro", ln=True, align='R')
     pdf.ln(8)
     
-    # 3. Note ed Esclusioni
+    # 3. Note ed Esclusioni nel PDF
     pdf.set_font("Arial", 'B', 10)
     pdf.cell(0, 6, "NOTE:", ln=True)
     pdf.set_font("Arial", '', 9)
     note_testo = (
         "- Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM "
-        "per garantire una restituzione grafica con precisione millimetrica.\n"
+        "per garantire una restituzione grafica con precisione millimetrica di altissima qualita'.\n"
         "- E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale."
     )
     pdf.multi_cell(0, 5, note_testo)
@@ -269,13 +267,13 @@ def genera_pdf():
     pdf.set_font("Arial", 'B', 10)
     pdf.cell(0, 6, "ESCLUSIONI (Salvo diversa pattuizione):", ln=True)
     pdf.set_font("Arial", '', 9)
-    esclusioni_testo = ("
-        - Rilievi e indagini geologiche o geotecniche.
-        - Pratiche di allacciamento o autorizzazione con terzi enti (es. Acque del Chiampo, Enel, ecc.).
-        - Eventuali saggi murari o strutturali invasivi.
-        - Pratiche VIA, VAS, VINCA.
-        - Frazionamento e/o accorpamenti immobiliari.
-        - Ogni altra prestazione non esplicitamente sopra descritta."
+    esclusioni_testo = (
+        "- Rilievi e indagini geologiche o geotecniche;\n"
+        "- Pratiche di allacciamento o autorizzazione con terzi enti (es. Acque del Chiampo, Enel, ecc.);\n"
+        "- Eventuali saggi murari o strutturali invasivi;\n"
+        "- Pratiche VIA, VAS, VINCA;\n"
+        "- Frazionamento e/o accorpamenti immobiliari;\n"
+        "- Ogni altra prestazione non esplicitamente sopra descritta."
     )
     pdf.multi_cell(0, 5, esclusioni_testo)
     
@@ -320,14 +318,25 @@ with col_output:
     st.markdown("**STATISTICA OPERAZIONE IMMOBILIARE**")
     st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
     
+    # --- RIGUADRO FISSO: NOTE ED ESCLUSIONI A SCHERMO ---
     st.markdown("""
-    **NOTE:**
-    - Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM per garantire precisione millimetrica.
-    - E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale.
-    
-    **ESCLUSIONI (Salvo diversa pattuizione):**
-    - Rilievi geologici, autorizzazioni terzi enti (es. Acque del Chiampo, Enel), saggi invasivi, VIA/VAS, frazionamenti.
-    """)
+    <div style='background-color: #F8F9FA; padding: 15px; border-radius: 5px; border: 1px solid #DEE2E6;'>
+        <p style='margin-bottom: 5px;'><strong>📌 NOTE:</strong></p>
+        <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
+            <li>Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM per garantire una restituzione grafica con precisione millimetrica di altissima qualità.</li>
+            <li>E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale.</li>
+        </ul>
+        <p style='margin-bottom: 5px;'><strong>🚫 ESCLUSIONI (Salvo diversa pattuizione):</strong></p>
+        <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
+            <li>Rilievi e indagini geologiche o geotecniche;</li>
+            <li>Pratiche di allacciamento o autorizzazione con terzi enti (es. Acque del Chiampo, Enel, ecc.);</li>
+            <li>Eventuali saggi murari o strutturali invasivi;</li>
+            <li>Pratiche VIA, VAS, VINCA;</li>
+            <li>Frazionamento e/o accorpamenti immobiliari;</li>
+            <li>Ogni altra prestazione non esplicitamente sopra descritta.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
     
     # --- PULSANTE DI DOWNLOAD PDF PER L'AGENTE ---
     if form_compilato:
