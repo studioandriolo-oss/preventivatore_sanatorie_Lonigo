@@ -377,3 +377,155 @@ with col_output:
             <li>Frazionamento e/o accorpamenti immobiliari.</li>
         </ul>
     </div>
+    """, unsafe_allow_html=True)
+    
+    # --- BOTTONI DI DOWNLOAD PDF ---
+    if form_compilato:
+        st.write("")
+        pdf_preventivo = genera_pdf()
+        st.download_button(
+            label="📄 Scarica Preventivo (Per il Cliente)",
+            data=pdf_preventivo,
+            file_name=f"Preventivo_Sanatoria_Studio_Andriolo.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            type="secondary"
+        )
+        
+        pdf_relazione = genera_relazione_pdf()
+        st.download_button(
+            label="📘 Scarica Relazione Tecnica (Per lo Studio)",
+            data=pdf_relazione,
+            file_name=f"Bozza_Relazione_Tecnica_Interna.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            type="secondary"
+        )
+
+# --- SEZIONE MODULO DI CONDIVISIONE ---
+st.markdown("---")
+
+col_testo_cond, col_spunta_cond = st.columns([3, 1])
+
+with col_testo_cond:
+    st.markdown("<h2 style='color: #0277BD; margin-top: -10px;'>📤 Vuoi condividere con l'architetto Andriolo?</h2>", unsafe_allow_html=True)
+    
+with col_spunta_cond:
+    st.write("") 
+    condividi = st.checkbox("Sì, apri il modulo")
+  
+if condividi:
+    st.markdown("### Modulo di Trasmissione Pratica")
+    
+    with st.form("form_invio_dati"):
+        
+        nome_rif = st.text_input("NOME DI RIFERIMENTO (Cliente o Immobile)")
+        
+        st.markdown("**DATI DI CONTATTO**")
+        c1, c2, c3 = st.columns(3)
+        agente = c1.text_input("Nome Agente")
+        email_agente = c2.text_input("Mail Agente")
+        telefono = c3.text_input("Telefono Agente")
+        
+        st.markdown("**DATI DELL'ABITAZIONE**")
+        a1, a2 = st.columns(2)
+        indirizzo = a1.text_input("Indirizzo Immobile")
+        comune = a2.text_input("Comune")
+
+        st.markdown("**DATI CATASTALI**")
+        c1, c2, c3 = st.columns(3)
+        foglio = c1.text_input("Foglio")
+        mappale = c2.text_input("Mappale")
+        subalterno = c3.text_input("Subalterno")
+        
+        st.markdown("**DOCUMENTI ALLEGATI**")
+        
+        doc_id = st.file_uploader("📂 CARICA documenti del proprietario (Carta d'Identità, Codice Fiscale)", type=["pdf", "jpg", "png"], accept_multiple_files=True)
+        altri_file = st.file_uploader("📂 CARICA altri documenti (Planimetrie, Visure, Foto precedenti)", type=["pdf", "jpg", "png"], accept_multiple_files=True)
+        
+        note = st.text_area("NOTE PER LO STUDIO")
+        
+        st.markdown("---")
+        if 'captcha_a' not in st.session_state:
+            st.session_state.captcha_a = random.randint(1, 9)
+            st.session_state.captcha_b = random.randint(1, 9)
+
+        st.write(f"🤖 **Controllo Anti-Spam: quanto fa {st.session_state.captcha_a} + {st.session_state.captcha_b}?**")
+        risposta_captcha = st.text_input("Inserisci il risultato numerico per sbloccare l'invio:")
+        somma_corretta = str(st.session_state.captcha_a + st.session_state.captcha_b)
+
+        inviato = st.form_submit_button("Invia Pratica allo Studio")
+        
+        if inviato:
+            if not agente or not email_agente:
+                st.error("⚠️ Attenzione: Inserisci almeno il Nome dell'Agente e la Mail prima di inviare.")
+            elif "@" not in email_agente or "." not in email_agente:
+                st.error("⚠️ L'indirizzo email inserito non sembra valido. Controlla la sintassi (es. nome@dominio.com).")
+            elif risposta_captcha.strip() == somma_corretta:
+                try:
+                    msg = EmailMessage()
+                    msg['Subject'] = f"Nuova Pratica da Valutatore - {nome_rif}"
+                    msg['From'] = "studioandriolo@gmail.com"
+                    msg['To'] = "studioandriolo@gmail.com"
+                    
+                    body = f"""
+Nuova richiesta dal valutatore agenti immobiliari.
+
+--- DATI DI CONTATTO E ABITAZIONE ---
+Riferimento: {nome_rif}
+Agente: {agente}
+Mail: {email_agente}
+Telefono: {telefono}
+Indirizzo: {indirizzo} - {comune}
+Dati Catastali: Fg.{foglio} Map.{mappale} Sub.{subalterno}
+
+--- RISPOSTE AL QUESTIONARIO (STATO DI FATTO) ---
+1. Situazione Interna: {interna}
+2. Situazione Esterna: {esterna}
+3. Immobile in zona vincolata: {vincolo}
+4. Certificazioni DICO presenti: {dico}
+5. Superficie Totale: {superficie} Mq
+6. Numero Unità: {unita}
+7. Cambio d'uso: {cambio_uso}
+8. Deroghe Salva Casa: {deroga}
+9. Mq Ampliati: {mq_ampliamento} Mq
+10. Accesso agli atti fatto: {accesso_fatto}
+11. Prezzo di vendita: {prezzo_vendita:,.2f} Euro
+
+--- RIEPILOGO TECNICO E COSTI ---
+Titolo Edilizio Stimato: {titolo}
+Totale Spese Tecniche: {tot_tecnico_lordo:,.2f} Euro
+Sanzione Comune: {sanzione:,.2f} Euro
+Costo Totale Lordo: {totale_chiavi_in_mano:,.2f} Euro
+
+--- NOTE DELL'AGENTE ---
+{note}
+"""
+                    msg.set_content(body)
+                    
+                    if doc_id:
+                        for f in doc_id:
+                            msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
+                            
+                    if altri_file:
+                        for f in altri_file:
+                            msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
+                            
+                    MAIL_PASSWORD = st.secrets["MAIL_PASSWORD"] 
+                    
+                    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                        server.starttls()
+                        server.login("studioandriolo@gmail.com", MAIL_PASSWORD)
+                        server.send_message(msg)
+                        
+                    st.success("✅ Dati e documenti inviati con successo allo Studio! Verrai ricontattato a breve.")
+                    
+                    st.session_state.captcha_a = random.randint(1, 9)
+                    st.session_state.captcha_b = random.randint(1, 9)
+                
+                except smtplib.SMTPAuthenticationError:
+                    st.error("❌ Errore di Autenticazione: Controlla le impostazioni di Streamlit Cloud.")
+                except Exception as e:
+                    st.error(f"❌ Si è verificato un errore generico durante l'invio: {e}")
+            else:
+                st.error("⚠️ Verifica sicurezza fallita: il risultato della somma non è corretto.")
