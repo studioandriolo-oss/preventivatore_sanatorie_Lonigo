@@ -211,8 +211,17 @@ import smtplib
 from email.message import EmailMessage
 
 st.markdown("---")
-condividi = st.checkbox("Vuoi condividere con l'architetto Andriolo?")
 
+# Layout a colonne per testo grande e spunta successiva
+col_testo_cond, col_spunta_cond = st.columns([3, 1])
+
+with col_testo_cond:
+    st.markdown("<h2 style='color: #0277BD; margin-top: -10px;'>📤 Vuoi condividere con l'architetto Andriolo?</h2>", unsafe_allow_html=True)
+    
+with col_spunta_cond:
+    st.write("") # Piccolo spazio per allineare verticalmente la spunta al testo grande
+    condividi = st.checkbox("Sì, apri il modulo")
+  
 if condividi:
     st.markdown("### Modulo di Trasmissione Pratica")
     
@@ -248,7 +257,7 @@ if condividi:
         # Captcha semplice di verifica umana
         captcha = st.text_input("Verifica sicurezza: Digita 'confermo' in minuscolo per abilitare l'invio")
         
-        inviato = st.form_submit_button("Invia Pratica allo Studio")
+        inviato = st.form_submit_button("Invia Pratica all'architetto")
         
         if inviato:
             if captcha == "confermo":
@@ -270,7 +279,7 @@ Mail: {email_agente}
 Telefono: {telefono}
 Indirizzo: {indirizzo}
 Comune: {comune}
-Dati Catastali: {folgio} {mappale} {subalterno}
+Dati Catastali: {foglio} {mappale} {subalterno}
 
 --- RISPOSTE AL QUESTIONARIO (STATO DI FATTO) ---
 1. Situazione Interna: {interna}
