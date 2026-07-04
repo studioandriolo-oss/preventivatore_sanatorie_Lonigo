@@ -319,7 +319,7 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
                             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
                             
       # Invio tramite server SMTP di Google
-                    PASSWORD_APP = "INSERISCI_QUI_LA_TUA_PASSWORD_PER_LE_APP" 
+                    PASSWORD_APP = "churcvfggqwhdaqz" 
                     
                     # CAMBIO METODO DI CONNESSIONE: Da 465 (SSL) a 587 (STARTTLS)
                     with smtplib.SMTP("smtp.gmail.com", 587) as server:
