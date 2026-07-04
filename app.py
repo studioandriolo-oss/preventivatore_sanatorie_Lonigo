@@ -218,7 +218,7 @@ with col_output:
     st.error(f"**Stima Oblazione F24 (Da versare direttamente al Comune):** € {sanzione:,.2f}")
     
     st.markdown(f"""
-        <div style='background-color: #C00000; padding: 15px; border-radius: 5px; text-align: center; border: 1px solid #BFBFBF;'>
+        <div style='background-color: #2E7D32; padding: 15px; border-radius: 5px; text-align: center; border: 1px solid #BFBFBF;'>
             <h4 style='color: white; margin:0;'>COSTO TOTALE STIMATO 'CHIAVI IN MANO'</h4>
             <h3 style='color: white; margin:0;'>€ {totale_chiavi_in_mano:,.2f}</h3>
         </div>
@@ -231,6 +231,22 @@ with col_output:
     incidenza_perc = (totale_chiavi_in_mano / prezzo_vendita) * 100 if (prezzo_vendita > 0 and form_compilato) else 0
     st.markdown("**STATISTICA OPERAZIONE IMMOBILIARE**")
     st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
+    
+    # ---  NOTE ED ESCLUSIONI ---
+    st.markdown("""
+    **NOTE:**
+    - Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM per garantire una restituzione grafica con precisione millimetrica di altissima qualità.
+    - E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale
+    
+    **ESCLUSIONI (Salvo diversa pattuizione):**
+    - Rilievi e indagini geologiche o geotecniche;
+    - Pratiche di allacciamento o autorizzazione con terzi enti (es. Acque del Chiampo, Enel, ecc.);
+    - Eventuali saggi murari o strutturali invasivi;
+    - Pratiche VIA, VAS, VINCA;
+    - Frazionamento e/o accorpamenti immobiliari;
+    - Ogni altra prestazione non esplicitamente sorpa descritta.
+    """)
+    # ----------------------------------------
 
 # --- SEZIONE MODULO DI CONDIVISIONE ---
 st.markdown("---")
