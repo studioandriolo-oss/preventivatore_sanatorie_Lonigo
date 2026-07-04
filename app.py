@@ -219,8 +219,8 @@ with col_output:
     
     st.markdown(f"""
         <div style='background-color: #C00000; padding: 15px; border-radius: 5px; text-align: center; border: 1px solid #BFBFBF;'>
-            <h4 style='color: white; margin:0;'>COSTO TOTALE STIMATO 'CHIAVI IN MANO' (Tecnico + Comune)</h4>
-            <h2 style='color: white; margin:0;'>€ {totale_chiavi_in_mano:,.2f}</h2>
+            <h4 style='color: white; margin:0;'>COSTO TOTALE STIMATO 'CHIAVI IN MANO'</h4>
+            <h3 style='color: white; margin:0;'>€ {totale_chiavi_in_mano:,.2f}</h3>
         </div>
     """, unsafe_allow_html=True)
     
