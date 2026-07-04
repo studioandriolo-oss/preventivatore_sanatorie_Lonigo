@@ -1,5 +1,8 @@
 import streamlit as st
 import pandas as pd
+import smtplib
+from email.message import EmailMessage
+import random
 
 # Configurazione della pagina
 st.set_page_config(page_title="Valutatore Sanatorie", page_icon="🏗️", layout="wide")
@@ -67,8 +70,8 @@ with col_input:
         dico = st.radio("4. SONO PRESENTI LE CERTIFICAZIONI DEGLI IMPIANTI (DICO)?", ["SI", "NO", "NON LO SO"])
         unita = st.number_input("6. NUMERO DI UNITÀ IMMOBILIARI COINVOLTE (Da aggiornare al Catasto):", min_value=1, value=1)
         deroga = st.radio("8. I LOCALI HANNO ALTEZZE < 2,70m O SUPERFICI RIDOTTE (Deroghe Salva Casa)?", ["NO", "SI"])
-       
-  # Domanda 9 condizionale
+        
+    # Domanda 9 condizionale
     mq_ampliamento = 0
     if esterna.startswith("C"):
         st.markdown("---")
@@ -150,7 +153,6 @@ elif superficie > 150:
 df = pd.DataFrame(voci_preventivo)
 # Filtra le voci a 0 (tranne Accesso atti se è a 0, per ricalcare l'Excel, oppure puliamo tutto)
 df = df[df["Imponibile"] > 0] if accesso_fatto == "NO" else df 
-# Se accesso atti è SI, nel tuo excel mostrava 0. Manteniamo la riga per fedeltà.
 
 tot_imponibile = df["Imponibile"].sum()
 tot_art15 = df["Art. 15"].sum()
@@ -197,7 +199,7 @@ with col_output:
         </div>
     """, unsafe_allow_html=True)
     
- # Spazio per staccare il blocco
+    # Spazio per staccare il blocco
     st.write("")
     st.write("")
 
@@ -207,9 +209,6 @@ with col_output:
     st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
 
 # --- SEZIONE MODULO DI CONDIVISIONE ---
-import smtplib
-from email.message import EmailMessage
-
 st.markdown("---")
 
 # Layout a colonne per testo grande e spunta successiva
@@ -243,9 +242,9 @@ if condividi:
 
         st.markdown("**DATI CATASTALI**")
         c1, c2, c3 = st.columns(3)
-        foglio = c1.text_input("foglio")
-        mappale = c2.text_input("mappale")
-        subalterno = c3.text_input("subalterno")
+        foglio = c1.text_input("Foglio")
+        mappale = c2.text_input("Mappale")
+        subalterno = c3.text_input("Subalterno")
         
         st.markdown("**DOCUMENTI ALLEGATI**")
         doc_id = st.file_uploader("CARICA carta di identità del proprietario", type=["pdf", "jpg", "png"])
@@ -254,21 +253,21 @@ if condividi:
         note = st.text_area("NOTE")
         
         st.markdown("---")
-      # --- CAPTCHA ANTI-ROBOT ---
-if 'captcha_a' not in st.session_state:
-    st.session_state.captcha_a = random.randint(1, 9)
-    st.session_state.captcha_b = random.randint(1, 9)
+        # --- CAPTCHA ANTI-ROBOT ---
+        if 'captcha_a' not in st.session_state:
+            st.session_state.captcha_a = random.randint(1, 9)
+            st.session_state.captcha_b = random.randint(1, 9)
 
-st.write(f"🤖 **Controllo Anti-Spam: quanto fa {st.session_state.captcha_a} + {st.session_state.captcha_b}?**")
-risposta_captcha = st.text_input("Inserisci il risultato numerico per sbloccare l'invio:")
-somma_corretta = str(st.session_state.captcha_a + st.session_state.captcha_b)
-   
+        st.write(f"🤖 **Controllo Anti-Spam: quanto fa {st.session_state.captcha_a} + {st.session_state.captcha_b}?**")
+        risposta_captcha = st.text_input("Inserisci il risultato numerico per sbloccare l'invio:")
+        somma_corretta = str(st.session_state.captcha_a + st.session_state.captcha_b)
+        
         inviato = st.form_submit_button("Invia Pratica all'architetto")
         
         if inviato:
-            if risposta_captcha == "somma corretta":
+            if risposta_captcha.strip() == somma_corretta:
                 try:
-                   # Costruzione dell'email
+                    # Costruzione dell'email
                     msg = EmailMessage()
                     msg['Subject'] = f"Nuova Pratica da Valutatore - {nome_rif}"
                     msg['From'] = "studioandriolo@gmail.com"
@@ -311,7 +310,6 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
 {note}
 """
                     msg.set_content(body)
-                    msg.set_content(body)
                     
                     # Gestione Allegati
                     if doc_id:
@@ -321,7 +319,6 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
                             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
                             
                     # Invio tramite server SMTP di Google
-                    # ATTENZIONE: Usa la "Password per le App" generata da Google, non la password normale della mail!
                     PASSWORD_APP = "INSERISCI_QUI_LA_TUA_PASSWORD_PER_LE_APP" 
                     
                     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
@@ -333,4 +330,4 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
                 except Exception as e:
                     st.error(f"❌ Si è verificato un errore durante l'invio: {e}")
             else:
-                st.error("⚠️ Verifica sicurezza fallita: digita 'confermo' per procedere.")
+                st.error("⚠️ Verifica sicurezza fallita: il risultato della somma non è corretto.")
