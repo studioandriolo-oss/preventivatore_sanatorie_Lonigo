@@ -269,13 +269,13 @@ def genera_pdf():
     pdf.set_font("Arial", 'B', 10)
     pdf.cell(0, 6, "ESCLUSIONI (Salvo diversa pattuizione):", ln=True)
     pdf.set_font("Arial", '', 9)
-    esclusioni_testo = (
-        "- Rilievi e indagini geologiche o geotecniche.\n"
-        "- Pratiche di allacciamento o autorizzazione con terzi enti (es. Acque del Chiampo, Enel, ecc.).\n"
-        "- Eventuali saggi murari o strutturali invasivi.\n"
-        "- Pratiche VIA, VAS, VINCA.\n"
-        "- Frazionamento e/o accorpamenti immobiliari.\n"
-        "- Ogni altra prestazione non esplicitamente sopra descritta."
+    esclusioni_testo = ("
+        - Rilievi e indagini geologiche o geotecniche.
+        - Pratiche di allacciamento o autorizzazione con terzi enti (es. Acque del Chiampo, Enel, ecc.).
+        - Eventuali saggi murari o strutturali invasivi.
+        - Pratiche VIA, VAS, VINCA.
+        - Frazionamento e/o accorpamenti immobiliari.
+        - Ogni altra prestazione non esplicitamente sopra descritta."
     )
     pdf.multi_cell(0, 5, esclusioni_testo)
     
