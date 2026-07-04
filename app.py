@@ -266,7 +266,7 @@ somma_corretta = str(st.session_state.captcha_a + st.session_state.captcha_b)
         inviato = st.form_submit_button("Invia Pratica all'architetto")
         
         if inviato:
-            if captcha == "confermo":
+            if risposta_captcha == "somma corretta":
                 try:
                    # Costruzione dell'email
                     msg = EmailMessage()
