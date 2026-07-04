@@ -205,3 +205,117 @@ with col_output:
     incidenza_perc = (totale_chiavi_in_mano / prezzo_vendita) * 100 if prezzo_vendita > 0 else 0
     st.markdown("**STATISTICA OPERAZIONE IMMOBILIARE**")
     st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
+
+# --- SEZIONE MODULO DI CONDIVISIONE ---
+import smtplib
+from email.message import EmailMessage
+
+st.markdown("---")
+condividi = st.checkbox("Vuoi condividere con l'architetto Andriolo?")
+
+if condividi:
+    st.markdown("### Modulo di Trasmissione Pratica")
+    
+    # Usiamo st.form per impacchettare i dati: la pagina non si ricarica finché non si clicca "Invia"
+    with st.form("form_invio_dati"):
+        
+        nome_rif = st.text_input("NOME DI RIFERIMENTO")
+        
+        st.markdown("**DATI DI CONTATTO**")
+        c1, c2, c3 = st.columns(3)
+        agente = c1.text_input("Agente")
+        email_agente = c2.text_input("Mail")
+        telefono = c3.text_input("Telefono")
+        
+        st.markdown("**DATI DELL'ABITAZIONE**")
+        a1, a2 = st.columns(2)
+        indirizzo = a1.text_input("Indirizzo")
+        comune = a2.text_input("Comune")
+
+          st.markdown("**DATI CATASTALI**")
+        c1, c2, c3 = st.columns(3)
+        foglio = c1.text_input("foglio")
+        mappale = c2.text_input("mappale")
+        subalterno = c3.text_input("subalterno")
+        
+        st.markdown("**DOCUMENTI ALLEGATI**")
+        doc_id = st.file_uploader("CARICA carta di identità del proprietario", type=["pdf", "jpg", "png"])
+        altri_file = st.file_uploader("CARICA altri files", accept_multiple_files=True)
+        
+        note = st.text_area("NOTE")
+        
+        st.markdown("---")
+        # Captcha semplice di verifica umana
+        captcha = st.text_input("Verifica sicurezza: Digita 'confermo' in minuscolo per abilitare l'invio")
+        
+        inviato = st.form_submit_button("Invia Pratica allo Studio")
+        
+        if inviato:
+            if captcha == "confermo":
+                try:
+                   # Costruzione dell'email
+                    msg = EmailMessage()
+                    msg['Subject'] = f"Nuova Pratica da Valutatore - {nome_rif}"
+                    msg['From'] = "studioandriolo@gmail.com"
+                    msg['To'] = "studioandriolo@gmail.com"
+                    
+                    # Corpo dell'email con tutti gli input dell'agente e il riepilogo
+                    body = f"""
+Nuova richiesta dal valutatore agenti immobiliari.
+
+--- DATI DI CONTATTO E ABITAZIONE ---
+NOME DI RIFERIMENTO: {nome_rif}
+Agente: {agente}
+Mail: {email_agente}
+Telefono: {telefono}
+Indirizzo: {indirizzo}
+Comune: {comune}
+Dati Catastali: {folgio} {mappale} {subalterno}
+
+--- RISPOSTE AL QUESTIONARIO (STATO DI FATTO) ---
+1. Situazione Interna: {interna}
+2. Situazione Esterna: {esterna}
+3. Immobile in zona vincolata: {vincolo}
+4. Certificazioni DICO presenti: {dico}
+5. Superficie Totale: {superficie} Mq
+6. Numero Unità Immobiliari: {unita}
+7. Cambio d'uso senza opere: {cambio_uso}
+8. Deroghe Salva Casa (Altezze/Superfici): {deroga}
+9. Mq Ampliati (se applicabile): {mq_ampliamento} Mq
+10. Accesso agli atti già effettuato: {accesso_fatto}
+11. Prezzo di vendita ipotizzato: € {prezzo_vendita:,.2f}
+
+--- RIEPILOGO TECNICO E COSTI STIMATI ---
+Titolo Edilizio Stimato: {titolo}
+Totale Imponibile Tecnico: € {tot_imponibile:,.2f}
+Spese Esenti (Art. 15): € {tot_art15:,.2f}
+Sanzione Amministrativa (Oblazione): € {sanzione:,.2f}
+Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
+
+--- NOTE AGGIUNTIVE DELL'AGENTE ---
+{note}
+"""
+                    msg.set_content(body)
+                    msg.set_content(body)
+                    
+                    # Gestione Allegati
+                    if doc_id:
+                        msg.add_attachment(doc_id.read(), maintype='application', subtype='octet-stream', filename=doc_id.name)
+                    if altri_file:
+                        for f in altri_file:
+                            msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
+                            
+                    # Invio tramite server SMTP di Google
+                    # ATTENZIONE: Usa la "Password per le App" generata da Google, non la password normale della mail!
+                    PASSWORD_APP = "INSERISCI_QUI_LA_TUA_PASSWORD_PER_LE_APP" 
+                    
+                    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                        server.login("studioandriolo@gmail.com", PASSWORD_APP)
+                        server.send_message(msg)
+                        
+                    st.success("✅ Dati inviati con successo allo Studio! Verrai ricontattato a breve.")
+                
+                except Exception as e:
+                    st.error(f"❌ Si è verificato un errore durante l'invio: {e}")
+            else:
+                st.error("⚠️ Verifica sicurezza fallita: digita 'confermo' per procedere.")
