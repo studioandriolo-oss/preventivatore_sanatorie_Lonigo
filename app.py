@@ -97,4 +97,283 @@ with col_input:
         """, unsafe_allow_html=True)
         
     with col_input_11:
-        prezzo_vendita = st.number
+        prezzo_vendita = st.number_input("Prezzo di vendita", min_value=0, value=150000, step=1000, label_visibility="collapsed")
+
+# ---- MOTORE DI CALCOLO LATO BACKEND ----
+form_compilato = (interna != "--- Seleziona un'opzione ---") and (esterna != "--- Seleziona un'opzione ---")
+voci_preventivo = []
+
+if not form_compilato:
+    titolo = "In attesa di dati..."
+    tot_imponibile = tot_art15 = cassa = iva = tot_tecnico_lordo = sanzione = totale_chiavi_in_mano = 0.0
+    df = pd.DataFrame(columns=["Voce", "Imponibile", "Art. 15"])
+else:
+    is_pdc = esterna.startswith("C")
+    is_scia = not is_pdc and (interna.startswith("D") or esterna.startswith("B"))
+    is_cila = not is_pdc and not is_scia
+
+    titolo = "Permesso di Costruire / SCIA Alternativa" if is_pdc else "SCIA in Sanatoria" if is_scia else "CILA in Sanatoria"
+
+    if accesso_fatto == "NO":
+        voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": COSTI["accesso_atti"], "Art. 15": DIRITTI["accesso_atti"]})
+    else:
+        voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
+
+    imp_base = COSTI["base_cila"] + COSTI["add_pdc"] if is_pdc else COSTI["base_cila"]
+    diritti_pratica = DIRITTI["pdc"] if is_pdc else DIRITTI["scia"] if is_scia else DIRITTI["cila"]
+    art15_base = diritti_pratica + (DIRITTI["catasto_per_unita"] * unita)
+    voci_preventivo.append({"Voce": "Quota Fissa Base (Istruttoria + Diritti + Catasto moltiplicato)", "Imponibile": imp_base, "Art. 15": art15_base})
+
+    if is_pdc:
+        voci_preventivo.append({"Voce": "Maggiorazione Volumi oltre Tolleranza", "Imponibile": COSTI["volumi"], "Art. 15": 0})
+
+    if vincolo == "SI" and not esterna.startswith("A"):
+        voci_preventivo.append({"Voce": "Pratica Paesaggistica Integrativa", "Imponibile": COSTI["paesaggistica"], "Art. 15": DIRITTI["paesaggistica"]})
+
+    if interna.startswith("D") or is_pdc:
+        voci_preventivo.append({"Voce": "Certificato Idoneità Statica / Sismica", "Imponibile": COSTI["statica"], "Art. 15": 0})
+
+    if esterna.startswith("B") or is_pdc:
+        voci_preventivo.append({"Voce": "Verifiche Involucro (Prospetti / Legge 10)", "Imponibile": COSTI["involucro"], "Art. 15": 0})
+
+    serve_agibilita = interna.startswith("C") or interna.startswith("D") or is_pdc or cambio_uso == "SI" or deroga == "SI"
+    if serve_agibilita:
+        voci_preventivo.append({"Voce": "Adempimenti Nuova Agibilità", "Imponibile": COSTI["agibilita"], "Art. 15": DIRITTI["agibilita"]})
+        if dico in ["NO", "NON LO SO"]:
+            voci_preventivo.append({"Voce": "Integrazione Oneri DiRi (Assenza DICO)", "Imponibile": COSTI["diri"], "Art. 15": 0})
+
+    if cambio_uso == "SI":
+        voci_preventivo.append({"Voce": "Pratica Cambio Destinazione d'Uso", "Imponibile": COSTI["cambio_uso"], "Art. 15": 0})
+    if deroga == "SI":
+        voci_preventivo.append({"Voce": "Asseverazione Deroghe Salva Casa", "Imponibile": COSTI["deroga_salvacasa"], "Art. 15": 0})
+
+    if superficie > 300:
+        voci_preventivo.append({"Voce": "Maggiorazione Scaglione Superficie", "Imponibile": COSTI["mq_grande"], "Art. 15": 0})
+    elif superficie > 150:
+        voci_preventivo.append({"Voce": "Maggiorazione Scaglione Superficie", "Imponibile": COSTI["mq_medio"], "Art. 15": 0})
+
+    df = pd.DataFrame(voci_preventivo)
+    df = df[df["Imponibile"] > 0] if accesso_fatto == "NO" else df 
+
+    tot_imponibile = df["Imponibile"].sum()
+    tot_art15 = df["Art. 15"].sum()
+    cassa = tot_imponibile * 0.04
+    iva = (tot_imponibile + cassa) * 0.22
+    tot_tecnico_lordo = tot_imponibile + tot_art15 + cassa + iva
+
+    if is_pdc:
+        sanzione_calcolata = mq_ampliamento * COSTI["moltiplicatore_ampliamento"]
+        sanzione = max(sanzione_calcolata, COSTI["sanzione_minima"])
+    else:
+        sanzione = COSTI["sanzione_minima"]
+
+    totale_chiavi_in_mano = tot_tecnico_lordo + sanzione
+
+# ---- FUNZIONE 1: PDF PREVENTIVO AGENTE ----
+def genera_pdf():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, "STUDIO ANDRIOLO", ln=True, align='C')
+    pdf.set_font("Arial", '', 12)
+    pdf.cell(0, 8, "Stima Preventiva Pratica in Sanatoria", ln=True, align='C')
+    pdf.line(10, 30, 200, 30)
+    pdf.ln(8)
+    
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 8, "1. STATO DI FATTO DICHIARATO", ln=True)
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(35, 6, "Sit. Interna:", border=0)
+    pdf.set_font("Arial", '', 10)
+    pdf.multi_cell(0, 6, f"{interna}")
+    
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(35, 6, "Sit. Esterna:", border=0)
+    pdf.set_font("Arial", '', 10)
+    pdf.multi_cell(0, 6, f"{esterna}")
+    pdf.ln(2)
+    
+    pdf.cell(95, 6, f"Superficie Immobile: {superficie} Mq", border=0)
+    pdf.cell(95, 6, f"Unita' Coinvolte: {unita}", ln=True)
+    pdf.cell(95, 6, f"Vincolo Paesaggistico: {vincolo}", border=0)
+    pdf.cell(95, 6, f"Certificazioni DICO: {dico}", ln=True)
+    pdf.cell(95, 6, f"Cambio d'uso: {cambio_uso}", border=0)
+    pdf.cell(95, 6, f"Deroghe Salva Casa: {deroga}", ln=True)
+    pdf.cell(95, 6, f"Accesso Atti Fatto: {accesso_fatto}", border=0)
+    if mq_ampliamento > 0:
+        pdf.cell(95, 6, f"Ampliamento: {mq_ampliamento} Mq", ln=True)
+    else:
+        pdf.ln(6)
+    pdf.cell(0, 6, f"Prezzo di Vendita Ipotizzato: {prezzo_vendita:,.2f} Euro", ln=True)
+    pdf.ln(6)
+    
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 8, "2. RIEPILOGO ECONOMICO STIMATO", ln=True)
+    pdf.set_font("Arial", 'I', 11)
+    pdf.cell(0, 8, f"Tipo Pratica Ipotizzata: {titolo}", ln=True)
+    pdf.ln(2)
+    
+    pdf.set_font("Arial", '', 11)
+    pdf.cell(120, 6, "Imponibile Professionale:", border=0)
+    pdf.cell(0, 6, f"{tot_imponibile:,.2f} Euro", ln=True, align='R')
+    pdf.cell(120, 6, "Spese Esenti (Art. 15 / Diritti):", border=0)
+    pdf.cell(0, 6, f"{tot_art15:,.2f} Euro", ln=True, align='R')
+    pdf.cell(120, 6, "IVA e Cassa Architetti:", border=0)
+    pdf.cell(0, 6, f"{(iva+cassa):,.2f} Euro", ln=True, align='R')
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(120, 8, "Totale Spese Tecniche:", border=0)
+    pdf.cell(0, 8, f"{tot_tecnico_lordo:,.2f} Euro", ln=True, align='R')
+    pdf.ln(2)
+    
+    pdf.set_font("Arial", '', 11)
+    pdf.cell(120, 6, "Stima Sanzione Comune (Oblazione F24):", border=0)
+    pdf.cell(0, 6, f"{sanzione:,.2f} Euro", ln=True, align='R')
+    pdf.line(10, pdf.get_y()+2, 200, pdf.get_y()+2)
+    pdf.ln(4)
+    
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(120, 10, "COSTO TOTALE 'CHIAVI IN MANO':", border=0)
+    pdf.cell(0, 10, f"{totale_chiavi_in_mano:,.2f} Euro", ln=True, align='R')
+    pdf.ln(8)
+    
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(0, 6, "NOTE:", ln=True)
+    pdf.set_font("Arial", '', 9)
+    note_testo = "- Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.\n- E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale."
+    pdf.multi_cell(0, 5, note_testo)
+    pdf.ln(3)
+    
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(0, 6, "ESCLUSIONI (Salvo diversa pattuizione):", ln=True)
+    pdf.set_font("Arial", '', 9)
+    esclusioni_testo = "- Rilievi geologici/geotecnici.\n- Autorizzazioni terzi enti.\n- Saggi murari invasivi.\n- Pratiche VIA/VAS.\n- Frazionamenti."
+    pdf.multi_cell(0, 5, esclusioni_testo)
+    
+    return pdf.output(dest='S').encode('latin-1')
+
+# ---- FUNZIONE 2: PDF RELAZIONE TECNICA PER LO STUDIO ----
+def genera_relazione_pdf():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, "RELAZIONE TECNICA PRELIMINARE - INQUADRAMENTO PRATICA", ln=True, align='C')
+    pdf.line(10, 20, 200, 20)
+    pdf.ln(5)
+    
+    # Riferimenti Generali
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(0, 6, "DATI PRINCIPALI:", ln=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(0, 6, f"- Titolo Stimato: {titolo}", ln=True)
+    pdf.cell(0, 6, f"- Superficie: {superficie} Mq | Unita' immobiliari: {unita}", ln=True)
+    pdf.cell(0, 6, f"- Ampliamento volume: {mq_ampliamento} Mq", ln=True)
+    pdf.ln(5)
+
+    # Costruzione logica dei paragrafi normativi
+    testo_relazione = []
+    
+    # 1. Inquadramento Titolo
+    if interna.startswith("A") and esterna.startswith("A"):
+        testo_relazione.append("[TOLLERANZE ESECUTIVE] Le difformita' rientrano nelle tolleranze costruttive ed esecutive (Art. 34-bis DPR 380/01). Non costituiscono violazione edilizia e non richiedono sanatoria. Sara' sufficiente una dichiarazione del tecnico in sede di rogito o per l'agibilita'.")
+    elif is_cila:
+        testo_relazione.append("[TITOLO IN SANATORIA] L'intervento si configura come Manutenzione Straordinaria 'leggera' ai sensi dell'Art. 6-bis comma 5 del D.P.R. 380/01. Le opere contestate (modifica distribuzione interna, rifacimento servizi) non hanno interessato le parti strutturali dell'edificio ne' i prospetti esterni. La sanatoria avviene tramite CILA tardiva con oblazione base di 1.000 euro.")
+    elif is_scia:
+        testo_relazione.append("[TITOLO IN SANATORIA] L'intervento si configura come Manutenzione Straordinaria 'pesante' o Restauro/Risanamento Conservativo ai sensi dell'Art. 37 del D.P.R. 380/01. L'abuso rientra nel campo delle 'parziali difformita', avendo interessato elementi strutturali o i prospetti esterni, senza tuttavia generare nuovi volumi. Si procedera' con SCIA in Sanatoria.")
+    else: # PdC
+        testo_relazione.append("[TITOLO IN SANATORIA] Trattandosi di intervento con impatto volumetrico o alterazione della sagoma (es. ampliamenti, chiusura di logge), l'opera si configura come Ristrutturazione Edilizia/Nuova Costruzione. La sanatoria richiedera' un Accertamento di Conformita' ex Art. 36 o Art. 36-bis del D.P.R. 380/01 (PdC in Sanatoria).")
+
+    # 2. Doppia conformità / Salva Casa
+    if not (interna.startswith("A") and esterna.startswith("A")):
+        testo_relazione.append("[CRITERIO DI CONFORMITA'] Alla luce del recente D.L. 69/2024 (L. 105/2024 'Salva Casa'), si applichera' il regime semplificato dell'accertamento di conformita'. Il tecnico asseverera' la conformita' urbanistica alla disciplina vigente al momento della presentazione della domanda, e la conformita' edilizia ai requisiti prescritti all'epoca della realizzazione dell'intervento, superando il previgente vincolo rigido della 'doppia conformita'.")
+
+    # 3. Strutture e Sismica
+    if interna.startswith("D"):
+        testo_relazione.append("[PROFILO STRUTTURALE E SISMICO] Le opere contestate hanno interessato elementi strutturali portanti. L'accertamento di conformita' e' subordinato alla redazione di un Certificato di Idoneita' Statica (CIS) o al deposito in sanatoria presso l'ex Genio Civile, ai sensi del D.P.R. 380/01 e delle NTC 2018, asseverando che l'intervento non abbia compromesso la statica globale dell'edificio.")
+
+    # 4. Paesaggistica
+    if vincolo == "SI":
+        testo_relazione.append("[VINCOLO PAESAGGISTICO] Ricadendo l'immobile in area sottoposta a vincolo, l'iter di sanatoria e' subordinato all'ottenimento dell'Accertamento di Compatibilita' Paesaggistica ex art. 167 del D.Lgs. 42/2004, comportante il versamento di un'autonoma sanzione paesaggistica (calcolata come maggiore importo tra danno ambientale e profitto conseguito).")
+
+    # 5. Prospetti e Facciate
+    if esterna.startswith("B") or esterna.startswith("C"):
+        testo_relazione.append("[PROFILO ARCHITETTONICO E INVOLUCRO] La modifica delle forometrie o l'aumento di volume costituisce alterazione dei prospetti. L'intervento richiedera' la verifica dei rapporti aeroilluminanti aggiornati e le verifiche di legge sul contenimento energetico (ex L. 10/91 e D.Lgs. 192/05) per l'involucro edilizio.")
+
+    # 6. Agibilità e Impianti
+    if dico in ["NO", "NON LO SO"]:
+        testo_relazione.append("[IMPIANTI] Stante l'assenza (o la non certezza) delle Dichiarazioni di Conformita' (DICO) originarie, ai fini della successiva SCA (Segnalazione Certificata di Agibilita') sara' indispensabile redigere apposite Dichiarazioni di Rispondenza (DiRi) per gli impianti presenti, avvalendosi di impiantisti abilitati.")
+
+    # 7. Deroghe igienico sanitarie
+    if deroga == "SI":
+        testo_relazione.append("[DEROGHE IGIENICO-SANITARIE] Le difformita' presentano locali con altezze inferiori a 2,70m e/o superfici inferiori ai minimi del D.M. 1975. Si procedera' con asseverazione specifica ai sensi delle deroghe introdotte dalla L. 105/2024, attestando in ogni caso il rispetto dei requisiti di aeroilluminazione e salubrita' (es. ventilazione meccanica).")
+
+    # 8. Cambio Destinazione d'Uso
+    if cambio_uso == "SI":
+        testo_relazione.append("[DESTINAZIONE D'USO] E' presente un mutamento di destinazione d'uso senza opere. L'asseverazione dovra' comprovare l'ammissibilita' dell'uso attuale secondo lo strumento urbanistico vigente, tenendo conto delle agevolazioni introdotte dal Decreto Salva Casa per i mutamenti all'interno della stessa categoria funzionale.")
+
+    # 9. Catasto
+    if not (interna.startswith("A") and esterna.startswith("A")):
+        testo_relazione.append(f"[AGGIORNAMENTO CATASTALE] A conclusione dell'iter edilizio di sanatoria, si rendera' necessario l'aggiornamento della planimetria catastale mediante procedura Docfa, per l'esatta rappresentazione in vista del rogito. L'aggiornamento interessera' n. {int(unita)} unita' immobiliare/i.")
+        
+    pdf.set_font("Arial", '', 10)
+    for paragrafo in testo_relazione:
+        pdf.multi_cell(0, 6, paragrafo)
+        pdf.ln(3)
+
+    return pdf.output(dest='S').encode('latin-1')
+
+# ---- OUTPUT RISULTATI (UI Destra) ----
+with col_output:
+    st.subheader("📊 Composizione del preventivo tecnico")
+    
+    if not form_compilato:
+        st.info("Compila i campi a sinistra per generare il preventivo.", icon="ℹ️")
+        df_placeholder = pd.DataFrame([{"Voce": "In attesa di dati...", "Imponibile": "€ 0,00", "Art. 15": "€ 0,00"}])
+        st.dataframe(df_placeholder, hide_index=True, use_container_width=True)
+    else:
+        st.info(f"**TIPO PRATICA STIMATA:**\n\n🎯 {titolo}", icon="ℹ️")
+        df_display = df.copy()
+        df_display["Imponibile"] = df_display["Imponibile"].apply(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        df_display["Art. 15"] = df_display["Art. 15"].apply(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        st.dataframe(df_display, hide_index=True, use_container_width=True)
+    
+    mc1, mc2, mc3 = st.columns(3)
+    mc1.metric("Imponibile", f"€ {tot_imponibile:,.2f}")
+    mc2.metric("Spese Art. 15", f"€ {tot_art15:,.2f}")
+    mc3.metric("IVA + Cassa", f"€ {(iva+cassa):,.2f}")
+    
+    st.success(f"**TOTALE PREVENTIVO SPESE TECNICHE:** € {tot_tecnico_lordo:,.2f}")
+    
+    st.divider()
+    st.warning("⚠️ **STIMA SANZIONE AMMINISTRATIVA (OBLAZIONE COMUNALE)**\n\n*ATTENZIONE: La stima in caso di ampliamento è calcolata ex. Art. 36 DPR 380/01 sui Mq aggiunti.*")
+    st.error(f"**Stima Oblazione F24 (Da versare al Comune):** € {sanzione:,.2f}")
+    
+    st.markdown(f"""
+        <div style='background-color: #10B981; padding: 15px; border-radius: 5px; text-align: center; border: 1px solid #BFBFBF;'>
+            <h4 style='color: white; margin:0;'>COSTO TOTALE STIMATO 'CHIAVI IN MANO'</h4>
+            <h3 style='color: white; margin:0;'>€ {totale_chiavi_in_mano:,.2f}</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.write("")
+
+    incidenza_perc = (totale_chiavi_in_mano / prezzo_vendita) * 100 if (prezzo_vendita > 0 and form_compilato) else 0
+    st.markdown("**STATISTICA OPERAZIONE IMMOBILIARE**")
+    st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
+    
+    # --- RIGUADRO FISSO: NOTE ED ESCLUSIONI A SCHERMO ---
+    st.markdown("""
+    <div style='background-color: #F8F9FA; padding: 15px; border-radius: 5px; border: 1px solid #DEE2E6;'>
+        <p style='margin-bottom: 5px;'><strong>📌 NOTE:</strong></p>
+        <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
+            <li>Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.</li>
+            <li>E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale.</li>
+        </ul>
+        <p style='margin-bottom: 5px;'><strong>🚫 ESCLUSIONI (Salvo diversa pattuizione):</strong></p>
+        <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
+            <li>Rilievi e indagini geologiche o geotecniche;</li>
+            <li>Pratiche di allacciamento o autorizzazione con terzi enti;</li>
+            <li>Eventuali saggi murari o strutturali invasivi;</li>
+            <li>Pratiche VIA, VAS, VINCA;</li>
+            <li>Frazionamento e/o accorpamenti immobiliari.</li>
+        </ul>
+    </div>
