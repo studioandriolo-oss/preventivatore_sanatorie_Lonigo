@@ -244,9 +244,39 @@ with col_output:
     - Eventuali saggi murari o strutturali invasivi;
     - Pratiche VIA, VAS, VINCA;
     - Frazionamento e/o accorpamenti immobiliari;
-    - Ogni altra prestazione non esplicitamente sorpa descritta.
+    - Ogni altra prestazione non esplicitamente sopra descritta.
     """)
-    # ----------------------------------------
+    
+    # --- PULSANTE DI DOWNLOAD PER L'AGENTE ---
+    if form_compilato:
+        testo_report = f"""RIEPILOGO STIMA SANATORIA - STUDIO ANDRIOLO
+----------------------------------------
+Pratica stimata: {titolo}
+Superficie Immobile: {superficie} Mq
+Numero Unità Coinvolte: {unita}
+
+SPESE TECNICHE STIMATE:
+- Imponibile Professionale: € {tot_imponibile:,.2f}
+- Spese Esenti (Art. 15): € {tot_art15:,.2f}
+- IVA e Cassa Architetti: € {(iva+cassa):,.2f}
+
+TOTALI SEPARATI:
+- Totale Lordo Spese Tecniche: € {tot_tecnico_lordo:,.2f}
+- Stima Sanzione Comune (F24): € {sanzione:,.2f}
+----------------------------------------
+COSTO TOTALE STIMATO 'CHIAVI IN MANO': € {totale_chiavi_in_mano:,.2f}
+----------------------------------------
+Note: Rilievo 3D SLAM millimetrico incluso. 
+Acconto € 600,00 richiesto all'accettazione formale.
+"""
+        st.write("")
+        st.download_button(
+            label="📥 Scarica Riepilogo in TXT",
+            data=testo_report,
+            file_name=f"Stima_Sanatoria_{superficie}mq.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
 
 # --- SEZIONE MODULO DI CONDIVISIONE ---
 st.markdown("---")
@@ -303,9 +333,11 @@ if condividi:
         inviato = st.form_submit_button("Invia Pratica all'architetto")
         
         if inviato:
-            # 1. CONTROLLO CAMPI OBBLIGATORI
+            # 1. CONTROLLO CAMPI OBBLIGATORI E SINTASSI EMAIL
             if not agente or not email_agente:
                 st.error("⚠️ Attenzione: Inserisci almeno il Nome dell'Agente e la Mail prima di inviare.")
+            elif "@" not in email_agente or "." not in email_agente:
+                st.error("⚠️ L'indirizzo email inserito non sembra valido. Controlla la sintassi (es. nome@dominio.com).")
             elif risposta_captcha.strip() == somma_corretta:
                 try:
                     # Costruzione dell'email
@@ -367,12 +399,12 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
                         
                     st.success("✅ Dati inviati con successo allo Studio! Verrai ricontattato a breve.")
                     
-                    # 3. RESET DEL CAPTCHA (Per svuotare il modulo per il prossimo invio)
+                    # 3. RESET DEL CAPTCHA
                     st.session_state.captcha_a = random.randint(1, 9)
                     st.session_state.captcha_b = random.randint(1, 9)
                 
                 except smtplib.SMTPAuthenticationError:
-                    st.error("❌ Errore di Autenticazione: Google rifiuta le credenziali. Controlla il file secrets.toml.")
+                    st.error("❌ Errore di Autenticazione: Google ha respinto la password per le app. Controlla le impostazioni di Streamlit Cloud.")
                 except Exception as e:
                     st.error(f"❌ Si è verificato un errore generico durante l'invio: {e}")
             else:
