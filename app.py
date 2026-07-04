@@ -44,9 +44,10 @@ st.markdown("Rispondi alle seguenti domande sulla base dello stato di fatto dell
 col_input, col_output = st.columns([1.3, 1])
 
 with col_input:
-    st.subheader("📋 Dati Immobile e Interventi")
+    st.subheader("📋 DATI IMMOBILE E INTERVENTI")
     
     interna = st.selectbox("1. SITUAZIONE INTERNA (Scegli la casistica più impattante):", [
+        "--- Seleziona un'opzione ---",
         "A - Solo lievi imprecisioni (Tolleranze < 2-5%)",
         "B - Spostamento o creazione di stanze normali",
         "C - Modifica o creazione di Bagni/Cucine",
@@ -54,6 +55,7 @@ with col_input:
     ])
     
     esterna = st.selectbox("2. SITUAZIONE ESTERNA / FACCIATE (Scegli la più impattante):", [
+        "--- Seleziona un'opzione ---",
         "A - Nessuna modifica esterna",
         "B - Spostamento/Allargamento Finestre o Porte",
         "C - Chiusura Terrazze/Verande o Ampliamenti volumi"
@@ -94,92 +96,115 @@ with col_input:
         prezzo_vendita = st.number_input("Prezzo di vendita", min_value=0, value=150000, step=1000, label_visibility="collapsed")
 
 # ---- MOTORE DI CALCOLO LATO BACKEND ----
-is_pdc = esterna.startswith("C")
-is_scia = not is_pdc and (interna.startswith("D") or esterna.startswith("B"))
-is_cila = not is_pdc and not is_scia
 
-titolo = "Permesso di Costruire / SCIA Alternativa" if is_pdc else "SCIA" if is_scia else "CILA in Sanatoria"
+# Controllo se il form è stato iniziato (le prime due domande non sono più sull'opzione vuota)
+form_compilato = (interna != "--- Seleziona un'opzione ---") and (esterna != "--- Seleziona un'opzione ---")
 
 voci_preventivo = []
 
-# Accesso agli atti
-if accesso_fatto == "NO":
-    voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": COSTI["accesso_atti"], "Art. 15": DIRITTI["accesso_atti"]})
+if not form_compilato:
+    # Stato Iniziale Azzerato
+    titolo = "In attesa di dati..."
+    tot_imponibile = 0.0
+    tot_art15 = 0.0
+    cassa = 0.0
+    iva = 0.0
+    tot_tecnico_lordo = 0.0
+    sanzione = 0.0
+    totale_chiavi_in_mano = 0.0
+    df = pd.DataFrame(columns=["Voce", "Imponibile", "Art. 15"])
 else:
-    voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
+    # Calcoli Reali
+    is_pdc = esterna.startswith("C")
+    is_scia = not is_pdc and (interna.startswith("D") or esterna.startswith("B"))
+    is_cila = not is_pdc and not is_scia
 
-# Quota Base
-imp_base = COSTI["base_cila"] + COSTI["add_pdc"] if is_pdc else COSTI["base_cila"]
-diritti_pratica = DIRITTI["pdc"] if is_pdc else DIRITTI["scia"] if is_scia else DIRITTI["cila"]
-art15_base = diritti_pratica + (DIRITTI["catasto_per_unita"] * unita)
-voci_preventivo.append({"Voce": "Quota Fissa Base (Istruttoria + Diritti + Catasto moltiplicato)", "Imponibile": imp_base, "Art. 15": art15_base})
+    titolo = "Permesso di Costruire / SCIA Alternativa" if is_pdc else "SCIA in Sanatoria" if is_scia else "CILA in Sanatoria"
 
-# Volumi Oltre Tolleranza
-if is_pdc:
-    voci_preventivo.append({"Voce": "Maggiorazione Volumi oltre Tolleranza", "Imponibile": COSTI["volumi"], "Art. 15": 0})
+    # Accesso agli atti
+    if accesso_fatto == "NO":
+        voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": COSTI["accesso_atti"], "Art. 15": DIRITTI["accesso_atti"]})
+    else:
+        voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
 
-# Paesaggistica
-if vincolo == "SI" and not esterna.startswith("A"):
-    voci_preventivo.append({"Voce": "Pratica Paesaggistica Integrativa", "Imponibile": COSTI["paesaggistica"], "Art. 15": DIRITTI["paesaggistica"]})
+    # Quota Base
+    imp_base = COSTI["base_cila"] + COSTI["add_pdc"] if is_pdc else COSTI["base_cila"]
+    diritti_pratica = DIRITTI["pdc"] if is_pdc else DIRITTI["scia"] if is_scia else DIRITTI["cila"]
+    art15_base = diritti_pratica + (DIRITTI["catasto_per_unita"] * unita)
+    voci_preventivo.append({"Voce": "Quota Fissa Base (Istruttoria + Diritti + Catasto moltiplicato)", "Imponibile": imp_base, "Art. 15": art15_base})
 
-# Statica
-if interna.startswith("D") or is_pdc:
-    voci_preventivo.append({"Voce": "Certificato Idoneità Statica / Sismica", "Imponibile": COSTI["statica"], "Art. 15": 0})
+    # Volumi Oltre Tolleranza
+    if is_pdc:
+        voci_preventivo.append({"Voce": "Maggiorazione Volumi oltre Tolleranza", "Imponibile": COSTI["volumi"], "Art. 15": 0})
 
-# Involucro/Legge 10
-if esterna.startswith("B") or is_pdc:
-    voci_preventivo.append({"Voce": "Verifiche Involucro (Prospetti / Legge 10)", "Imponibile": COSTI["involucro"], "Art. 15": 0})
+    # Paesaggistica
+    if vincolo == "SI" and not esterna.startswith("A"):
+        voci_preventivo.append({"Voce": "Pratica Paesaggistica Integrativa", "Imponibile": COSTI["paesaggistica"], "Art. 15": DIRITTI["paesaggistica"]})
 
-# Agibilità & DiRi
-serve_agibilita = interna.startswith("C") or interna.startswith("D") or is_pdc or cambio_uso == "SI" or deroga == "SI"
-if serve_agibilita:
-    voci_preventivo.append({"Voce": "Adempimenti Nuova Agibilità", "Imponibile": COSTI["agibilita"], "Art. 15": DIRITTI["agibilita"]})
-    if dico in ["NO", "NON LO SO"]:
-        voci_preventivo.append({"Voce": "Integrazione Oneri DiRi (Assenza DICO)", "Imponibile": COSTI["diri"], "Art. 15": 0})
+    # Statica
+    if interna.startswith("D") or is_pdc:
+        voci_preventivo.append({"Voce": "Certificato Idoneità Statica / Sismica", "Imponibile": COSTI["statica"], "Art. 15": 0})
 
-# Cambio Uso & Deroghe
-if cambio_uso == "SI":
-    voci_preventivo.append({"Voce": "Pratica Cambio Destinazione d'Uso (Verifica Standard)", "Imponibile": COSTI["cambio_uso"], "Art. 15": 0})
-if deroga == "SI":
-    voci_preventivo.append({"Voce": "Asseverazione Deroghe Salva Casa (Altezze/Superfici)", "Imponibile": COSTI["deroga_salvacasa"], "Art. 15": 0})
+    # Involucro/Legge 10
+    if esterna.startswith("B") or is_pdc:
+        voci_preventivo.append({"Voce": "Verifiche Involucro (Prospetti / Legge 10)", "Imponibile": COSTI["involucro"], "Art. 15": 0})
 
-# Maggiorazione Mq
-if superficie > 300:
-    voci_preventivo.append({"Voce": "Maggiorazione per Scaglione Superficie", "Imponibile": COSTI["mq_grande"], "Art. 15": 0})
-elif superficie > 150:
-    voci_preventivo.append({"Voce": "Maggiorazione per Scaglione Superficie", "Imponibile": COSTI["mq_medio"], "Art. 15": 0})
+    # Agibilità & DiRi
+    serve_agibilita = interna.startswith("C") or interna.startswith("D") or is_pdc or cambio_uso == "SI" or deroga == "SI"
+    if serve_agibilita:
+        voci_preventivo.append({"Voce": "Adempimenti Nuova Agibilità", "Imponibile": COSTI["agibilita"], "Art. 15": DIRITTI["agibilita"]})
+        if dico in ["NO", "NON LO SO"]:
+            voci_preventivo.append({"Voce": "Integrazione Oneri DiRi (Assenza DICO)", "Imponibile": COSTI["diri"], "Art. 15": 0})
 
-# Calcoli Totali Tecnici
-df = pd.DataFrame(voci_preventivo)
-# Filtra le voci a 0 (tranne Accesso atti se è a 0, per ricalcare l'Excel, oppure puliamo tutto)
-df = df[df["Imponibile"] > 0] if accesso_fatto == "NO" else df 
+    # Cambio Uso & Deroghe
+    if cambio_uso == "SI":
+        voci_preventivo.append({"Voce": "Pratica Cambio Destinazione d'Uso (Verifica Standard)", "Imponibile": COSTI["cambio_uso"], "Art. 15": 0})
+    if deroga == "SI":
+        voci_preventivo.append({"Voce": "Asseverazione Deroghe Salva Casa (Altezze/Superfici)", "Imponibile": COSTI["deroga_salvacasa"], "Art. 15": 0})
 
-tot_imponibile = df["Imponibile"].sum()
-tot_art15 = df["Art. 15"].sum()
-cassa = tot_imponibile * 0.04
-iva = (tot_imponibile + cassa) * 0.22
-tot_tecnico_lordo = tot_imponibile + tot_art15 + cassa + iva
+    # Maggiorazione Mq
+    if superficie > 300:
+        voci_preventivo.append({"Voce": "Maggiorazione per Scaglione Superficie", "Imponibile": COSTI["mq_grande"], "Art. 15": 0})
+    elif superficie > 150:
+        voci_preventivo.append({"Voce": "Maggiorazione per Scaglione Superficie", "Imponibile": COSTI["mq_medio"], "Art. 15": 0})
 
-# Calcolo Sanzione (Oblazione)
-if is_pdc:
-    sanzione_calcolata = mq_ampliamento * COSTI["moltiplicatore_ampliamento"]
-    sanzione = max(sanzione_calcolata, COSTI["sanzione_minima"])
-else:
-    sanzione = COSTI["sanzione_minima"]
+    # Calcoli Totali Tecnici
+    df = pd.DataFrame(voci_preventivo)
+    df = df[df["Imponibile"] > 0] if accesso_fatto == "NO" else df 
 
-totale_chiavi_in_mano = tot_tecnico_lordo + sanzione
+    tot_imponibile = df["Imponibile"].sum()
+    tot_art15 = df["Art. 15"].sum()
+    cassa = tot_imponibile * 0.04
+    iva = (tot_imponibile + cassa) * 0.22
+    tot_tecnico_lordo = tot_imponibile + tot_art15 + cassa + iva
+
+    # Calcolo Sanzione (Oblazione)
+    if is_pdc:
+        sanzione_calcolata = mq_ampliamento * COSTI["moltiplicatore_ampliamento"]
+        sanzione = max(sanzione_calcolata, COSTI["sanzione_minima"])
+    else:
+        sanzione = COSTI["sanzione_minima"]
+
+    totale_chiavi_in_mano = tot_tecnico_lordo + sanzione
 
 # ---- OUTPUT RISULTATI (UI Destra) ----
 with col_output:
-    st.subheader("📊 COMPOSIZIONE DEL PREVENTIVO (SPESE TECNICHE)")
+    st.subheader("📊 Composizione del preventivo tecnico")
     
-    st.info(f"**TIPO PRATICA STIMATA:**\n\n🎯 {titolo}", icon="ℹ️")
-    
-    df_display = df.copy()
-    df_display["Imponibile"] = df_display["Imponibile"].apply(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    df_display["Art. 15"] = df_display["Art. 15"].apply(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    
-    st.dataframe(df_display, hide_index=True, use_container_width=True)
+    if not form_compilato:
+        st.info("Compila i campi a sinistra per generare il preventivo.", icon="ℹ️")
+        
+        # Tabella segnaposto
+        df_placeholder = pd.DataFrame([{"Voce": "In attesa di dati...", "Imponibile": "€ 0,00", "Art. 15": "€ 0,00"}])
+        st.dataframe(df_placeholder, hide_index=True, use_container_width=True)
+    else:
+        st.info(f"**TIPO PRATICA STIMATA:**\n\n🎯 {titolo}", icon="ℹ️")
+        
+        df_display = df.copy()
+        df_display["Imponibile"] = df_display["Imponibile"].apply(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        df_display["Art. 15"] = df_display["Art. 15"].apply(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        
+        st.dataframe(df_display, hide_index=True, use_container_width=True)
     
     mc1, mc2, mc3 = st.columns(3)
     mc1.metric("Imponibile", f"€ {tot_imponibile:,.2f}")
@@ -199,32 +224,29 @@ with col_output:
         </div>
     """, unsafe_allow_html=True)
     
-    # Spazio per staccare il blocco
     st.write("")
     st.write("")
 
     # --- INCIDENZA SUL PREZZO DI VENDITA ---
-    incidenza_perc = (totale_chiavi_in_mano / prezzo_vendita) * 100 if prezzo_vendita > 0 else 0
+    incidenza_perc = (totale_chiavi_in_mano / prezzo_vendita) * 100 if (prezzo_vendita > 0 and form_compilato) else 0
     st.markdown("**STATISTICA OPERAZIONE IMMOBILIARE**")
     st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
 
 # --- SEZIONE MODULO DI CONDIVISIONE ---
 st.markdown("---")
 
-# Layout a colonne per testo grande e spunta successiva
 col_testo_cond, col_spunta_cond = st.columns([3, 1])
 
 with col_testo_cond:
     st.markdown("<h2 style='color: #0277BD; margin-top: -10px;'>📤 Vuoi condividere con l'architetto Andriolo?</h2>", unsafe_allow_html=True)
     
 with col_spunta_cond:
-    st.write("") # Piccolo spazio per allineare verticalmente la spunta al testo grande
+    st.write("") 
     condividi = st.checkbox("Sì, apri il modulo")
   
 if condividi:
     st.markdown("### Modulo di Trasmissione Pratica")
     
-    # Usiamo st.form per impacchettare i dati: la pagina non si ricarica finché non si clicca "Invia"
     with st.form("form_invio_dati"):
         
         nome_rif = st.text_input("NOME DI RIFERIMENTO")
@@ -273,7 +295,6 @@ if condividi:
                     msg['From'] = "studioandriolo@gmail.com"
                     msg['To'] = "studioandriolo@gmail.com"
                     
-                    # Corpo dell'email con tutti gli input dell'agente e il riepilogo
                     body = f"""
 Nuova richiesta dal valutatore agenti immobiliari.
 
@@ -284,7 +305,7 @@ Mail: {email_agente}
 Telefono: {telefono}
 Indirizzo: {indirizzo}
 Comune: {comune}
-Dati Catastali: {foglio} {mappale} {subalterno}
+Dati Catastali: Fg.{foglio} Map.{mappale} Sub.{subalterno}
 
 --- RISPOSTE AL QUESTIONARIO (STATO DI FATTO) ---
 1. Situazione Interna: {interna}
@@ -311,27 +332,25 @@ Costo Totale 'Chiavi in Mano' (Lordo): € {totale_chiavi_in_mano:,.2f}
 """
                     msg.set_content(body)
                     
-                    # Gestione Allegati
                     if doc_id:
                         msg.add_attachment(doc_id.read(), maintype='application', subtype='octet-stream', filename=doc_id.name)
                     if altri_file:
                         for f in altri_file:
                             msg.add_attachment(f.read(), maintype='application', subtype='octet-stream', filename=f.name)
                             
-      # Invio tramite server SMTP di Google
+                    # Invio tramite server SMTP di Google sulla porta 587 (STARTTLS)
                     PASSWORD_APP = "churcvfggqwhdaqz" 
                     
-                    # CAMBIO METODO DI CONNESSIONE: Da 465 (SSL) a 587 (STARTTLS)
                     with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                        server.ehlo() # Saluta il server
-                        server.starttls() # Attiva la crittografia di sicurezza
+                        server.ehlo()
+                        server.starttls()
                         server.login("studioandriolo@gmail.com", PASSWORD_APP)
                         server.send_message(msg)
                         
                     st.success("✅ Dati inviati con successo allo Studio! Verrai ricontattato a breve.")
                 
                 except smtplib.SMTPAuthenticationError:
-                    st.error("❌ Errore 535: Google rifiuta ancora le credenziali. Assicurati che PASSWORD_APP non abbia spazi intermedi (es. 'abcdefghijklmnop' e non 'abcd efgh...').")
+                    st.error("❌ Errore di Autenticazione: Google rifiuta le credenziali. Controlla che PASSWORD_APP sia corretta e senza spazi.")
                 except Exception as e:
                     st.error(f"❌ Si è verificato un errore generico durante l'invio: {e}")
             else:
