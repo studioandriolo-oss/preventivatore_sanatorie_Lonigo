@@ -232,7 +232,7 @@ if condividi:
         indirizzo = a1.text_input("Indirizzo")
         comune = a2.text_input("Comune")
 
-          st.markdown("**DATI CATASTALI**")
+        st.markdown("**DATI CATASTALI**")
         c1, c2, c3 = st.columns(3)
         foglio = c1.text_input("foglio")
         mappale = c2.text_input("mappale")
