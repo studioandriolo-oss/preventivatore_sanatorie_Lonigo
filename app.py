@@ -37,6 +37,7 @@ DIRITTI = {
 }
 
 # ---- INTERFACCIA UTENTE (UI) ----
+st.image("logo.png", width=250)
 st.title("🏗️ Valutatore Rapido Costi Sanatoria CHIAVI IN MANO")
 st.markdown("Rispondi alle seguenti domande sulla base dello stato di fatto dell'immobile.")
 
@@ -52,7 +53,9 @@ with col_input:
         "B - Spostamento o creazione di stanze normali",
         "C - Modifica o creazione di Bagni/Cucine",
         "D - Demolizione muri spessi o portanti o modifiche a parti strutturali"
-    ])
+    ],
+    help="Considera 'lievi imprecisioni' se le differenze rispetto alla planimetria sono sotto il 5% (es. un muro spostato di 5-10 cm). Se manca una stanza intera, passa alle opzioni successive."
+)
     
     esterna = st.selectbox("2. SITUAZIONE ESTERNA / FACCIATE (Scegli la più impattante):", [
         "--- Seleziona un'opzione ---",
