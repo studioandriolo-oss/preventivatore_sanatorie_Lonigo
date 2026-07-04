@@ -218,7 +218,7 @@ with col_output:
     st.error(f"**Stima Oblazione F24 (Da versare direttamente al Comune):** € {sanzione:,.2f}")
     
     st.markdown(f"""
-        <div style='background-color: #2E7D32; padding: 15px; border-radius: 5px; text-align: center; border: 1px solid #BFBFBF;'>
+        <div style='background-color: #10B981; padding: 15px; border-radius: 5px; text-align: center; border: 1px solid #BFBFBF;'>
             <h4 style='color: white; margin:0;'>COSTO TOTALE STIMATO 'CHIAVI IN MANO'</h4>
             <h3 style='color: white; margin:0;'>€ {totale_chiavi_in_mano:,.2f}</h3>
         </div>
