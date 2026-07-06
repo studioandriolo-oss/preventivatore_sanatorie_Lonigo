@@ -122,7 +122,7 @@ else:
     else:
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
 
-    if richiesta_CDU == "NO":
+    if richiesta_CDU == "SI":
         voci_preventivo.append({"Voce": "richiesta_CDU", "Imponibile": COSTI["richiesta_CDU"], "Art. 15": DIRITTI["CDU"]})
     else:
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
