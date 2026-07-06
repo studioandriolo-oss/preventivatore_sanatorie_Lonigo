@@ -24,17 +24,19 @@ COSTI = {
     "deroga_salvacasa": 500,
     "accesso_atti": 90,
     "sanzione_minima": 1032,
-    "moltiplicatore_ampliamento": 124
+    "moltiplicatore_ampliamento": 124,
+    "richiesta_CDU": 70
 }
 
 DIRITTI = {
     "accesso_atti": 80,
-    "cila": 80,
-    "scia": 100,
-    "pdc": 300,
+    "cila": 100,
+    "scia": 150,
+    "pdc": 350,
     "catasto_per_unita": 70,
     "paesaggistica": 132,
-    "agibilita": 70
+    "agibilita": 70,
+    "CDU": 80
 }
 
 # ---- INTERFACCIA UTENTE (UI) ----
@@ -73,6 +75,7 @@ with col_input:
         superficie = st.number_input("5. SUPERFICIE COMMERCIALE TOTALE IMMOBILE (Mq):", min_value=1, value=120)
         cambio_uso = st.radio("7. C'È STATO UN CAMBIO D'USO SENZA OPERE? (es. da magazzino/sottotetto ad abitazione)?", ["NO", "SI"])
         accesso_fatto = st.radio("10. E' GIA' STATO FATTO UN ACCESSO AGLI ATTI?", ["SI", "NO"])
+        richiesta_CDU = st.radio("13. SERVE UNA RICHIESTA DI CDU?", ["SI", "NO"])
         
     with col2:
         dico = st.radio("4. SONO PRESENTI LE CERTIFICAZIONI DEGLI IMPIANTI (DICO)?", ["SI", "NO", "NON LO SO"])
@@ -116,6 +119,11 @@ else:
 
     if accesso_fatto == "NO":
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": COSTI["accesso_atti"], "Art. 15": DIRITTI["accesso_atti"]})
+    else:
+        voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
+
+    if richiesta_CDU == "NO":
+        voci_preventivo.append({"Voce": "richiesta_CDU", "Imponibile": COSTI["richiesta_CDU"], "Art. 15": DIRITTI["CDU"]})
     else:
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
 
