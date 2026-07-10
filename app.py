@@ -24,19 +24,17 @@ COSTI = {
     "deroga_salvacasa": 500,
     "accesso_atti": 90,
     "sanzione_minima": 1032,
-    "moltiplicatore_ampliamento": 124,
-    "richiesta_CDU": 70
+    "moltiplicatore_ampliamento": 124
 }
 
 DIRITTI = {
     "accesso_atti": 80,
-    "cila": 100,
-    "scia": 150,
-    "pdc": 350,
+    "cila": 80,
+    "scia": 100,
+    "pdc": 300,
     "catasto_per_unita": 70,
     "paesaggistica": 132,
-    "agibilita": 70,
-    "CDU": 80
+    "agibilita": 70
 }
 
 # ---- INTERFACCIA UTENTE (UI) ----
@@ -66,7 +64,8 @@ with col_input:
         "--- Seleziona un'opzione ---",
         "A - Nessuna modifica esterna",
         "B - Spostamento/Allargamento Finestre o Porte",
-        "C - Chiusura Terrazze/Verande o Ampliamenti volumi"
+        "C - Chiusura Terrazze/Verande o Ampliamenti volumi",
+        "D - Modifica di sagoma entro le tolleranze o minor volume"
     ])
     
     col1, col2 = st.columns(2)
@@ -75,7 +74,6 @@ with col_input:
         superficie = st.number_input("5. SUPERFICIE COMMERCIALE TOTALE IMMOBILE (Mq):", min_value=1, value=120)
         cambio_uso = st.radio("7. C'È STATO UN CAMBIO D'USO SENZA OPERE? (es. da magazzino/sottotetto ad abitazione)?", ["NO", "SI"])
         accesso_fatto = st.radio("10. E' GIA' STATO FATTO UN ACCESSO AGLI ATTI?", ["SI", "NO"])
-        richiesta_CDU = st.radio("13. SERVE UNA RICHIESTA DI CDU?", ["SI", "NO"])
         
     with col2:
         dico = st.radio("4. SONO PRESENTI LE CERTIFICAZIONI DEGLI IMPIANTI (DICO)?", ["SI", "NO", "NON LO SO"])
@@ -111,19 +109,19 @@ if not form_compilato:
     tot_imponibile = tot_art15 = cassa = iva = tot_tecnico_lordo = sanzione = totale_chiavi_in_mano = 0.0
     df = pd.DataFrame(columns=["Voce", "Imponibile", "Art. 15"])
 else:
+    # La D esterna viene assimilata alla B come impatto pratico/economico
     is_pdc = esterna.startswith("C")
-    is_scia = not is_pdc and (interna.startswith("D") or esterna.startswith("B"))
+    is_scia = not is_pdc and (interna.startswith("D") or esterna.startswith("B") or esterna.startswith("D"))
     is_cila = not is_pdc and not is_scia
 
-    titolo = "Permesso di Costruire / SCIA Alternativa" if is_pdc else "SCIA in Sanatoria" if is_scia else "CILA in Sanatoria"
+    # Se sia dentro che fuori sono tolleranze, il titolo base si adatta
+    if interna.startswith("A") and (esterna.startswith("A") or esterna.startswith("D")):
+        titolo = "Dichiarazione Stato Legittimo (Art. 34-bis)"
+    else:
+        titolo = "Permesso di Costruire / SCIA Alternativa" if is_pdc else "SCIA in Sanatoria" if is_scia else "CILA in Sanatoria"
 
     if accesso_fatto == "NO":
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": COSTI["accesso_atti"], "Art. 15": DIRITTI["accesso_atti"]})
-    else:
-        voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
-
-    if richiesta_CDU == "SI":
-        voci_preventivo.append({"Voce": "richiesta_CDU", "Imponibile": COSTI["richiesta_CDU"], "Art. 15": DIRITTI["CDU"]})
     else:
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
 
@@ -141,7 +139,8 @@ else:
     if interna.startswith("D") or is_pdc:
         voci_preventivo.append({"Voce": "Certificato Idoneità Statica / Sismica", "Imponibile": COSTI["statica"], "Art. 15": 0})
 
-    if esterna.startswith("B") or is_pdc:
+    # L'opzione D incide sui costi come la B
+    if esterna.startswith("B") or esterna.startswith("D") or is_pdc:
         voci_preventivo.append({"Voce": "Verifiche Involucro (Prospetti / Legge 10)", "Imponibile": COSTI["involucro"], "Art. 15": 0})
 
     serve_agibilita = interna.startswith("C") or interna.startswith("D") or is_pdc or cambio_uso == "SI" or deroga == "SI"
@@ -280,13 +279,13 @@ def genera_relazione_pdf():
     # Costruzione logica dei paragrafi normativi
     testo_relazione = []
     
-    # 1. Inquadramento Titolo
-    if interna.startswith("A") and esterna.startswith("A"):
-        testo_relazione.append("[TOLLERANZE ESECUTIVE] Le difformita' rientrano nelle tolleranze costruttive ed esecutive (Art. 34-bis DPR 380/01). Non costituiscono violazione edilizia e non richiedono sanatoria. Sara' sufficiente una dichiarazione del tecnico in sede di rogito o per l'agibilita'.")
+    # 1. Inquadramento Titolo (Aggiornato per supportare la sagoma)
+    if interna.startswith("A") and (esterna.startswith("A") or esterna.startswith("D")):
+        testo_relazione.append("[TOLLERANZE ESECUTIVE E SAGOMA] Le difformita' (incluse le eventuali modifiche di sagoma o minor volume) rientrano nelle tolleranze costruttive ed esecutive ex Art. 34-bis DPR 380/01. Non costituiscono violazione edilizia. Sara' sufficiente redigere e depositare un'apposita Dichiarazione del Tecnico per l'attestazione dello Stato Legittimo.")
     elif is_cila:
-        testo_relazione.append("[TITOLO IN SANATORIA] L'intervento si configura come Manutenzione Straordinaria 'leggera' ai sensi dell'Art. 6-bis comma 5 del D.P.R. 380/01. Le opere contestate (modifica distribuzione interna, rifacimento servizi) non hanno interessato le parti strutturali dell'edificio ne' i prospetti esterni. La sanatoria avviene tramite CILA tardiva con oblazione base di 1.000 euro.")
+        testo_relazione.append("[TITOLO IN SANATORIA] L'intervento si configura come Manutenzione Straordinaria 'leggera' ai sensi dell'Art. 6-bis comma 5 del D.P.R. 380/01. Le opere contestate non hanno interessato le parti strutturali dell'edificio ne' i prospetti esterni. La sanatoria avviene tramite CILA tardiva.")
     elif is_scia:
-        testo_relazione.append("[TITOLO IN SANATORIA] L'intervento si configura come Manutenzione Straordinaria 'pesante' o Restauro/Risanamento Conservativo ai sensi dell'Art. 37 del D.P.R. 380/01. L'abuso rientra nel campo delle 'parziali difformita', avendo interessato elementi strutturali o i prospetti esterni, senza tuttavia generare nuovi volumi. Si procedera' con SCIA in Sanatoria.")
+        testo_relazione.append("[TITOLO IN SANATORIA] L'intervento si configura come Manutenzione Straordinaria 'pesante' o Restauro/Risanamento Conservativo ai sensi dell'Art. 37 del D.P.R. 380/01. L'abuso rientra nel campo delle 'parziali difformita'. Si procedera' con SCIA in Sanatoria, includendo l'asseverazione per tolleranze ove presenti.")
     else: # PdC
         testo_relazione.append("[TITOLO IN SANATORIA] Trattandosi di intervento con impatto volumetrico o alterazione della sagoma (es. ampliamenti, chiusura di logge), l'opera si configura come Ristrutturazione Edilizia/Nuova Costruzione. La sanatoria richiedera' un Accertamento di Conformita' ex Art. 36 o Art. 36-bis del D.P.R. 380/01 (PdC in Sanatoria).")
 
@@ -296,27 +295,29 @@ def genera_relazione_pdf():
 
     # 3. Strutture e Sismica
     if interna.startswith("D"):
-        testo_relazione.append("[PROFILO STRUTTURALE E SISMICO] Le opere contestate hanno interessato elementi strutturali portanti. L'accertamento di conformita' e' subordinato alla redazione di un Certificato di Idoneita' Statica (CIS) o al deposito in sanatoria presso l'ex Genio Civile, ai sensi del D.P.R. 380/01 e delle NTC 2018, asseverando che l'intervento non abbia compromesso la statica globale dell'edificio.")
+        testo_relazione.append("[PROFILO STRUTTURALE E SISMICO] Le opere contestate hanno interessato elementi strutturali portanti. L'accertamento di conformita' e' subordinato alla redazione di un Certificato di Idoneita' Statica (CIS) o al deposito in sanatoria presso l'ex Genio Civile, ai sensi del D.P.R. 380/01 e delle NTC 2018.")
 
     # 4. Paesaggistica
     if vincolo == "SI":
-        testo_relazione.append("[VINCOLO PAESAGGISTICO] Ricadendo l'immobile in area sottoposta a vincolo, l'iter di sanatoria e' subordinato all'ottenimento dell'Accertamento di Compatibilita' Paesaggistica ex art. 167 del D.Lgs. 42/2004, comportante il versamento di un'autonoma sanzione paesaggistica (calcolata come maggiore importo tra danno ambientale e profitto conseguito).")
+        testo_relazione.append("[VINCOLO PAESAGGISTICO] Ricadendo l'immobile in area sottoposta a vincolo, l'iter di sanatoria e' subordinato all'ottenimento dell'Accertamento di Compatibilita' Paesaggistica ex art. 167 del D.Lgs. 42/2004, comportante il versamento di un'autonoma sanzione paesaggistica.")
 
-    # 5. Prospetti e Facciate
+    # 5. Prospetti, Facciate e Tolleranze esterne
     if esterna.startswith("B") or esterna.startswith("C"):
         testo_relazione.append("[PROFILO ARCHITETTONICO E INVOLUCRO] La modifica delle forometrie o l'aumento di volume costituisce alterazione dei prospetti. L'intervento richiedera' la verifica dei rapporti aeroilluminanti aggiornati e le verifiche di legge sul contenimento energetico (ex L. 10/91 e D.Lgs. 192/05) per l'involucro edilizio.")
+    elif esterna.startswith("D"):
+        testo_relazione.append("[MODIFICHE ESTERNE / ART. 34-BIS] La modifica di sagoma rilevata e/o il minor volume rientrano nel campo di applicazione dell'Art. 34-bis del D.P.R. 380/01. L'intervento esterno sara' asseverato come tolleranza esecutiva, mantenendo i requisiti di decoro architettonico, senza configurare violazione edilizia per la porzione esterna.")
 
     # 6. Agibilità e Impianti
     if dico in ["NO", "NON LO SO"]:
-        testo_relazione.append("[IMPIANTI] Stante l'assenza (o la non certezza) delle Dichiarazioni di Conformita' (DICO) originarie, ai fini della successiva SCA (Segnalazione Certificata di Agibilita') sara' indispensabile redigere apposite Dichiarazioni di Rispondenza (DiRi) per gli impianti presenti, avvalendosi di impiantisti abilitati.")
+        testo_relazione.append("[IMPIANTI] Stante l'assenza (o la non certezza) delle Dichiarazioni di Conformita' (DICO) originarie, ai fini della successiva SCA sara' indispensabile redigere apposite Dichiarazioni di Rispondenza (DiRi) per gli impianti presenti, avvalendosi di impiantisti abilitati.")
 
     # 7. Deroghe igienico sanitarie
     if deroga == "SI":
-        testo_relazione.append("[DEROGHE IGIENICO-SANITARIE] Le difformita' presentano locali con altezze inferiori a 2,70m e/o superfici inferiori ai minimi del D.M. 1975. Si procedera' con asseverazione specifica ai sensi delle deroghe introdotte dalla L. 105/2024, attestando in ogni caso il rispetto dei requisiti di aeroilluminazione e salubrita' (es. ventilazione meccanica).")
+        testo_relazione.append("[DEROGHE IGIENICO-SANITARIE] Le difformita' presentano locali con altezze inferiori a 2,70m e/o superfici inferiori ai minimi del D.M. 1975. Si procedera' con asseverazione specifica ai sensi delle deroghe introdotte dalla L. 105/2024, attestando in ogni caso il rispetto dei requisiti di aeroilluminazione e salubrita'.")
 
     # 8. Cambio Destinazione d'Uso
     if cambio_uso == "SI":
-        testo_relazione.append("[DESTINAZIONE D'USO] E' presente un mutamento di destinazione d'uso senza opere. L'asseverazione dovra' comprovare l'ammissibilita' dell'uso attuale secondo lo strumento urbanistico vigente, tenendo conto delle agevolazioni introdotte dal Decreto Salva Casa per i mutamenti all'interno della stessa categoria funzionale.")
+        testo_relazione.append("[DESTINAZIONE D'USO] E' presente un mutamento di destinazione d'uso senza opere. L'asseverazione dovra' comprovare l'ammissibilita' dell'uso attuale secondo lo strumento urbanistico vigente, tenendo conto delle agevolazioni introdotte dal Decreto Salva Casa.")
 
     # 9. Catasto
     if not (interna.startswith("A") and esterna.startswith("A")):
