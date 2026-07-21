@@ -274,11 +274,17 @@ def genera_pdf():
     pdf.cell(0, 10, f"{totale_chiavi_in_mano:,.2f} Euro", ln=True, align='R')
     pdf.ln(8)
     
-    pdf.set_font("Arial", 'B', 12)
+    pdf.set_font("Arial", 'B', 10)
     pdf.cell(0, 6, "NOTE:", ln=True)
-    pdf.set_font("Arial", '', 11)
-    note_testo = "- Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.\n- E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale."
-    pdf.multi_cell(0, 5, note_testo)
+    
+    # Riga 1: Grassetto
+    pdf.set_font("Arial", 'B', 9) 
+    pdf.cell(0, 5, "- Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.", ln=True)
+    
+    # Riga 2: Testo normale
+    pdf.set_font("Arial", '', 9)
+    pdf.cell(0, 5, "- E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale.", ln=True)
+    
     pdf.ln(3)
     
     pdf.set_font("Arial", 'B', 10)
@@ -410,7 +416,7 @@ with col_output:
     <div style='background-color: #F8F9FA; padding: 15px; border-radius: 5px; border: 1px solid #DEE2E6;'>
         <p style='margin-bottom: 5px;'><strong>📌 NOTE:</strong></p>
         <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
-            <li>Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.</li>
+            <li><strong>Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.</li>
             <li>E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale.</li>
         </ul>
         <p style='margin-bottom: 5px;'><strong>🚫 ESCLUSIONI (Salvo diversa pattuizione):</strong></p>
