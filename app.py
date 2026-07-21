@@ -144,7 +144,7 @@ else:
     if is_solo_catasto:
         imp_base = 700 + (350 * (unita - 1))
         art15_base = DIRITTI["catasto_per_unita"] * unita
-        voci_preventivo.append({"Voce": "Onorario Variazione Catastale (Base + Unità aggiuntive)", "Imponibile": imp_base, "Art. 15": art15_base})
+        voci_preventivo.append({"Voce": "Onorario Variazione Catastale", "Imponibile": imp_base, "Art. 15": art15_base})
     else:
         imp_base = COSTI["base_cila"] + COSTI["add_pdc"] if is_pdc else COSTI["base_cila"]
         diritti_pratica = DIRITTI["pdc"] if is_pdc else DIRITTI["scia"] if is_scia else DIRITTI["cila"]
@@ -274,9 +274,9 @@ def genera_pdf():
     pdf.cell(0, 10, f"{totale_chiavi_in_mano:,.2f} Euro", ln=True, align='R')
     pdf.ln(8)
     
-    pdf.set_font("Arial", 'B', 10)
+    pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 6, "NOTE:", ln=True)
-    pdf.set_font("Arial", '', 9)
+    pdf.set_font("Arial", '', 11)
     note_testo = "- Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.\n- E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale."
     pdf.multi_cell(0, 5, note_testo)
     pdf.ln(3)
