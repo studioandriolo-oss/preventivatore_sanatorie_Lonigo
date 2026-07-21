@@ -278,7 +278,7 @@ def genera_pdf():
     pdf.cell(0, 6, "NOTE:", ln=True)
     
     # Riga 1: Grassetto
-    pdf.set_font("Arial", 'B', 9) 
+    pdf.set_font("Arial", 'B', 11) 
     pdf.cell(0, 5, "- Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.", ln=True)
     
     # Riga 2: Testo normale
