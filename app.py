@@ -61,7 +61,6 @@ with col_input:
         "C - Modifica o creazione di Bagni/Cucine",
         "D - Demolizione muri spessi o portanti o modifiche a parti strutturali",
         "E - Solo variazione catastale"
-    ], help="Considera 'lievi imprecisioni' se le differenze rispetto alla planimetria sono sotto il 5% (es. un muro spostato di 5-10 cm). Se manca una stanza intera, passa alle opzioni successive.")
     
     esterna = st.selectbox("2. SITUAZIONE ESTERNA / FACCIATE (Scegli la più impattante):", [
         "--- Seleziona un'opzione ---",
@@ -107,6 +106,9 @@ with col_input:
 # ---- MOTORE DI CALCOLO LATO BACKEND ----
 form_compilato = (interna != "--- Seleziona un'opzione ---") and (esterna != "--- Seleziona un'opzione ---")
 voci_preventivo = []
+
+# Inizializzazione sicura per evitare errori di NameError al primo caricamento
+is_pdc = is_scia = is_cila = is_solo_catasto = is_tolleranze = False
 
 if not form_compilato:
     titolo = "In attesa di dati..."
