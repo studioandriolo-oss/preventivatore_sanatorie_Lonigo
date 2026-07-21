@@ -128,11 +128,9 @@ else:
     else:
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
 
-    if CDU == "NO":
+    if CDU == "SI":
         voci_preventivo.append({"Voce": "CDU", "Imponibile": COSTI["CDU"], "Art. 15": DIRITTI["CDU_diritti"]})
-    else:
-        voci_preventivo.append({"Voce": "CDU", "Imponibile": 0, "Art. 15": 0})
-
+   
     imp_base = COSTI["base_cila"] + COSTI["add_pdc"] if is_pdc else COSTI["base_cila"]
     diritti_pratica = DIRITTI["pdc"] if is_pdc else DIRITTI["scia"] if is_scia else DIRITTI["cila"]
     art15_base = diritti_pratica + (DIRITTI["catasto_per_unita"] * unita)
