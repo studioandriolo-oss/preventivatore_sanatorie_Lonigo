@@ -24,7 +24,8 @@ COSTI = {
     "deroga_salvacasa": 500,
     "accesso_atti": 90,
     "sanzione_minima": 1032,
-    "moltiplicatore_ampliamento": 124
+    "moltiplicatore_ampliamento": 124,
+    "CDU": 80
 }
 
 DIRITTI = {
@@ -34,7 +35,8 @@ DIRITTI = {
     "pdc": 300,
     "catasto_per_unita": 70,
     "paesaggistica": 132,
-    "agibilita": 70
+    "agibilita": 70,
+    "CDU_diritti": 80
 }
 
 # ---- INTERFACCIA UTENTE (UI) ----
@@ -58,8 +60,8 @@ with col_input:
         "B - Spostamento o creazione di stanze normali",
         "C - Modifica o creazione di Bagni/Cucine",
         "D - Demolizione muri spessi o portanti o modifiche a parti strutturali"
-    ], help="Considera 'lievi imprecisioni' se le differenze rispetto alla planimetria sono sotto il 5% (es. un muro spostato di 5-10 cm). Se manca una stanza intera, passa alle opzioni successive.")
-    
+        "E - Solo variazione catastale"
+   
     esterna = st.selectbox("2. SITUAZIONE ESTERNA / FACCIATE (Scegli la più impattante):", [
         "--- Seleziona un'opzione ---",
         "A - Nessuna modifica esterna",
@@ -74,6 +76,7 @@ with col_input:
         superficie = st.number_input("5. SUPERFICIE COMMERCIALE TOTALE IMMOBILE (Mq):", min_value=1, value=120)
         cambio_uso = st.radio("7. C'È STATO UN CAMBIO D'USO SENZA OPERE? (es. da magazzino/sottotetto ad abitazione)?", ["NO", "SI"])
         accesso_fatto = st.radio("10. E' GIA' STATO FATTO UN ACCESSO AGLI ATTI?", ["SI", "NO"])
+        CDU = st.radio("12. SERVE CDU?", ["NO", "SI"])
         
     with col2:
         dico = st.radio("4. SONO PRESENTI LE CERTIFICAZIONI DEGLI IMPIANTI (DICO)?", ["SI", "NO", "NON LO SO"])
@@ -124,6 +127,11 @@ else:
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": COSTI["accesso_atti"], "Art. 15": DIRITTI["accesso_atti"]})
     else:
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
+
+     if CDU == "NO":
+        voci_preventivo.append({"Voce": "CDU", "Imponibile": COSTI["CDU"], "Art. 15": DIRITTI["CDU_diritti"]})
+    else:
+        voci_preventivo.append({"Voce": "CDU", "Imponibile": 0, "Art. 15": 0})
 
     imp_base = COSTI["base_cila"] + COSTI["add_pdc"] if is_pdc else COSTI["base_cila"]
     diritti_pratica = DIRITTI["pdc"] if is_pdc else DIRITTI["scia"] if is_scia else DIRITTI["cila"]
@@ -500,6 +508,8 @@ Dati Catastali: Fg.{foglio} Map.{mappale} Sub.{subalterno}
 9. Mq Ampliati: {mq_ampliamento} Mq
 10. Accesso agli atti fatto: {accesso_fatto}
 11. Prezzo di vendita: {prezzo_vendita:,.2f} Euro
+12. CDU fatto: {serve_CDU}
+
 
 --- RIEPILOGO TECNICO E COSTI ---
 Titolo Edilizio Stimato: {titolo}
