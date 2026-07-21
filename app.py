@@ -61,7 +61,7 @@ with col_input:
         "C - Modifica o creazione di Bagni/Cucine",
         "D - Demolizione muri spessi o portanti o modifiche a parti strutturali",
         "E - Solo variazione catastale"
-    
+    ])
     esterna = st.selectbox("2. SITUAZIONE ESTERNA / FACCIATE (Scegli la più impattante):", [
         "--- Seleziona un'opzione ---",
         "A - Nessuna modifica esterna",
