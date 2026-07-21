@@ -61,7 +61,8 @@ with col_input:
         "C - Modifica o creazione di Bagni/Cucine",
         "D - Demolizione muri spessi o portanti o modifiche a parti strutturali",
         "E - Solo variazione catastale"
-    ])
+    ], help="Considera 'lievi imprecisioni' se le differenze rispetto alla planimetria sono sotto il 5% (es. un muro spostato di 5-10 cm). Se manca una stanza intera, passa alle opzioni successive.")
+    
     esterna = st.selectbox("2. SITUAZIONE ESTERNA / FACCIATE (Scegli la più impattante):", [
         "--- Seleziona un'opzione ---",
         "A - Nessuna modifica esterna",
@@ -112,59 +113,75 @@ if not form_compilato:
     tot_imponibile = tot_art15 = cassa = iva = tot_tecnico_lordo = sanzione = totale_chiavi_in_mano = 0.0
     df = pd.DataFrame(columns=["Voce", "Imponibile", "Art. 15"])
 else:
-    # La D esterna viene assimilata alla B come impatto pratico/economico
     is_pdc = esterna.startswith("C")
     is_scia = not is_pdc and (interna.startswith("D") or esterna.startswith("B") or esterna.startswith("D"))
-    is_cila = not is_pdc and not is_scia
+    
+    is_solo_catasto = interna.startswith("E") and esterna.startswith("A")
+    is_tolleranze = interna.startswith("A") and (esterna.startswith("A") or esterna.startswith("D"))
+    
+    is_cila = not is_pdc and not is_scia and not is_solo_catasto and not is_tolleranze
 
-    # Se sia dentro che fuori sono tolleranze, il titolo base si adatta
-    if interna.startswith("A") and (esterna.startswith("A") or esterna.startswith("D")):
+    # Definizione del titolo della pratica
+    if is_solo_catasto:
+        titolo = "Variazione Catastale (Docfa)"
+    elif is_tolleranze:
         titolo = "Dichiarazione Stato Legittimo (Art. 34-bis)"
     else:
         titolo = "Permesso di Costruire / SCIA Alternativa" if is_pdc else "SCIA in Sanatoria" if is_scia else "CILA in Sanatoria"
 
+    # 1. Accesso agli atti e CDU (Sempre valutabili)
     if accesso_fatto == "NO":
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": COSTI["accesso_atti"], "Art. 15": DIRITTI["accesso_atti"]})
     else:
         voci_preventivo.append({"Voce": "Accesso agli atti", "Imponibile": 0, "Art. 15": 0})
 
     if CDU == "SI":
-        voci_preventivo.append({"Voce": "CDU", "Imponibile": COSTI["CDU"], "Art. 15": DIRITTI["CDU_diritti"]})
-   
-    imp_base = COSTI["base_cila"] + COSTI["add_pdc"] if is_pdc else COSTI["base_cila"]
-    diritti_pratica = DIRITTI["pdc"] if is_pdc else DIRITTI["scia"] if is_scia else DIRITTI["cila"]
-    art15_base = diritti_pratica + (DIRITTI["catasto_per_unita"] * unita)
-    voci_preventivo.append({"Voce": "Quota Fissa Base (Istruttoria + Diritti + Catasto moltiplicato)", "Imponibile": imp_base, "Art. 15": art15_base})
+        voci_preventivo.append({"Voce": "Richiesta e Ritiro CDU", "Imponibile": COSTI["CDU"], "Art. 15": DIRITTI["CDU_diritti"]})
 
-    if is_pdc:
-        voci_preventivo.append({"Voce": "Maggiorazione Volumi oltre Tolleranza", "Imponibile": COSTI["volumi"], "Art. 15": 0})
+    # 2. Quota Fissa Base (Sdoppiata per il "Solo Catasto")
+    if is_solo_catasto:
+        imp_base = 700 + (350 * (unita - 1))
+        art15_base = DIRITTI["catasto_per_unita"] * unita
+        voci_preventivo.append({"Voce": "Onorario Variazione Catastale (Base + Unità aggiuntive)", "Imponibile": imp_base, "Art. 15": art15_base})
+    else:
+        imp_base = COSTI["base_cila"] + COSTI["add_pdc"] if is_pdc else COSTI["base_cila"]
+        diritti_pratica = DIRITTI["pdc"] if is_pdc else DIRITTI["scia"] if is_scia else DIRITTI["cila"]
+        art15_base = diritti_pratica + (DIRITTI["catasto_per_unita"] * unita)
+        voci_preventivo.append({"Voce": "Quota Fissa Base (Istruttoria + Diritti + Catasto moltiplicato)", "Imponibile": imp_base, "Art. 15": art15_base})
 
-    if vincolo == "SI" and not esterna.startswith("A"):
-        voci_preventivo.append({"Voce": "Pratica Paesaggistica Integrativa", "Imponibile": COSTI["paesaggistica"], "Art. 15": DIRITTI["paesaggistica"]})
+    # 3. Maggiorazioni Pratiche Edilizie (Ignorate se "Solo Catasto")
+    if not is_solo_catasto:
+        if is_pdc:
+            voci_preventivo.append({"Voce": "Maggiorazione Volumi oltre Tolleranza", "Imponibile": COSTI["volumi"], "Art. 15": 0})
 
-    if interna.startswith("D") or is_pdc:
-        voci_preventivo.append({"Voce": "Certificato Idoneità Statica / Sismica", "Imponibile": COSTI["statica"], "Art. 15": 0})
+        if vincolo == "SI" and not esterna.startswith("A"):
+            voci_preventivo.append({"Voce": "Pratica Paesaggistica Integrativa", "Imponibile": COSTI["paesaggistica"], "Art. 15": DIRITTI["paesaggistica"]})
 
-    # L'opzione D incide sui costi come la B
-    if esterna.startswith("B") or esterna.startswith("D") or is_pdc:
-        voci_preventivo.append({"Voce": "Verifiche Involucro (Prospetti / Legge 10)", "Imponibile": COSTI["involucro"], "Art. 15": 0})
+        if interna.startswith("D") or is_pdc:
+            voci_preventivo.append({"Voce": "Certificato Idoneità Statica / Sismica", "Imponibile": COSTI["statica"], "Art. 15": 0})
 
-    serve_agibilita = interna.startswith("C") or interna.startswith("D") or is_pdc or cambio_uso == "SI" or deroga == "SI"
-    if serve_agibilita:
-        voci_preventivo.append({"Voce": "Adempimenti Nuova Agibilità", "Imponibile": COSTI["agibilita"], "Art. 15": DIRITTI["agibilita"]})
-        if dico in ["NO", "NON LO SO"]:
-            voci_preventivo.append({"Voce": "Integrazione Oneri DiRi (Assenza DICO)", "Imponibile": COSTI["diri"], "Art. 15": 0})
+        if esterna.startswith("B") or esterna.startswith("D") or is_pdc:
+            voci_preventivo.append({"Voce": "Verifiche Involucro (Prospetti / Legge 10)", "Imponibile": COSTI["involucro"], "Art. 15": 0})
 
-    if cambio_uso == "SI":
-        voci_preventivo.append({"Voce": "Pratica Cambio Destinazione d'Uso", "Imponibile": COSTI["cambio_uso"], "Art. 15": 0})
-    if deroga == "SI":
-        voci_preventivo.append({"Voce": "Asseverazione Deroghe Salva Casa", "Imponibile": COSTI["deroga_salvacasa"], "Art. 15": 0})
+        serve_agibilita = interna.startswith("C") or interna.startswith("D") or is_pdc or cambio_uso == "SI" or deroga == "SI"
+        if serve_agibilita:
+            voci_preventivo.append({"Voce": "Adempimenti Nuova Agibilità", "Imponibile": COSTI["agibilita"], "Art. 15": DIRITTI["agibilita"]})
+            if dico in ["NO", "NON LO SO"]:
+                voci_preventivo.append({"Voce": "Integrazione Oneri DiRi (Assenza DICO)", "Imponibile": COSTI["diri"], "Art. 15": 0})
 
+        if cambio_uso == "SI":
+            voci_preventivo.append({"Voce": "Pratica Cambio Destinazione d'Uso", "Imponibile": COSTI["cambio_uso"], "Art. 15": 0})
+            
+        if deroga == "SI":
+            voci_preventivo.append({"Voce": "Asseverazione Deroghe Salva Casa", "Imponibile": COSTI["deroga_salvacasa"], "Art. 15": 0})
+
+    # 4. Maggiorazioni per Dimensione Immobile (Si applicano sempre)
     if superficie > 300:
         voci_preventivo.append({"Voce": "Maggiorazione Scaglione Superficie", "Imponibile": COSTI["mq_grande"], "Art. 15": 0})
     elif superficie > 150:
         voci_preventivo.append({"Voce": "Maggiorazione Scaglione Superficie", "Imponibile": COSTI["mq_medio"], "Art. 15": 0})
 
+    # Compilazione Dataframe e Calcoli Fiscali
     df = pd.DataFrame(voci_preventivo)
     df = df[df["Imponibile"] > 0] if accesso_fatto == "NO" else df 
 
@@ -174,7 +191,10 @@ else:
     iva = (tot_imponibile + cassa) * 0.22
     tot_tecnico_lordo = tot_imponibile + tot_art15 + cassa + iva
 
-    if is_pdc:
+    # Calcolo Oblazione / Sanzione (Non dovuta per Catasto o Tolleranze)
+    if is_solo_catasto or is_tolleranze:
+        sanzione = 0
+    elif is_pdc:
         sanzione_calcolata = mq_ampliamento * COSTI["moltiplicatore_ampliamento"]
         sanzione = max(sanzione_calcolata, COSTI["sanzione_minima"])
     else:
@@ -213,10 +233,13 @@ def genera_pdf():
     pdf.cell(95, 6, f"Cambio d'uso: {cambio_uso}", border=0)
     pdf.cell(95, 6, f"Deroghe Salva Casa: {deroga}", ln=True)
     pdf.cell(95, 6, f"Accesso Atti Fatto: {accesso_fatto}", border=0)
+    
     if mq_ampliamento > 0:
         pdf.cell(95, 6, f"Ampliamento: {mq_ampliamento} Mq", ln=True)
+        pdf.cell(95, 6, f"Serve CDU: {CDU}", ln=True)
     else:
-        pdf.ln(6)
+        pdf.cell(95, 6, f"Serve CDU: {CDU}", ln=True)
+        
     pdf.cell(0, 6, f"Prezzo di Vendita Ipotizzato: {prezzo_vendita:,.2f} Euro", ln=True)
     pdf.ln(6)
     
@@ -279,14 +302,17 @@ def genera_relazione_pdf():
     pdf.set_font("Arial", '', 10)
     pdf.cell(0, 6, f"- Titolo Stimato: {titolo}", ln=True)
     pdf.cell(0, 6, f"- Superficie: {superficie} Mq | Unita' immobiliari: {unita}", ln=True)
-    pdf.cell(0, 6, f"- Ampliamento volume: {mq_ampliamento} Mq", ln=True)
+    if mq_ampliamento > 0:
+        pdf.cell(0, 6, f"- Ampliamento volume: {mq_ampliamento} Mq", ln=True)
     pdf.ln(5)
 
     # Costruzione logica dei paragrafi normativi
     testo_relazione = []
     
-    # 1. Inquadramento Titolo (Aggiornato per supportare la sagoma)
-    if interna.startswith("A") and (esterna.startswith("A") or esterna.startswith("D")):
+    # 1. Inquadramento Titolo
+    if is_solo_catasto:
+        testo_relazione.append("[VARIAZIONE CATASTALE] L'intervento richiesto si configura come pura Variazione Catastale (es. esatta rappresentazione grafica, o divisione/fusione senza opere). L'iter non prevede l'attivazione di procedimenti edilizi in sanatoria, ma l'esclusivo aggiornamento della banca dati dell'Agenzia delle Entrate tramite procedura Docfa.")
+    elif is_tolleranze:
         testo_relazione.append("[TOLLERANZE ESECUTIVE E SAGOMA] Le difformita' (incluse le eventuali modifiche di sagoma o minor volume) rientrano nelle tolleranze costruttive ed esecutive ex Art. 34-bis DPR 380/01. Non costituiscono violazione edilizia. Sara' sufficiente redigere e depositare un'apposita Dichiarazione del Tecnico per l'attestazione dello Stato Legittimo.")
     elif is_cila:
         testo_relazione.append("[TITOLO IN SANATORIA] L'intervento si configura come Manutenzione Straordinaria 'leggera' ai sensi dell'Art. 6-bis comma 5 del D.P.R. 380/01. Le opere contestate non hanno interessato le parti strutturali dell'edificio ne' i prospetti esterni. La sanatoria avviene tramite CILA tardiva.")
@@ -295,39 +321,38 @@ def genera_relazione_pdf():
     else: # PdC
         testo_relazione.append("[TITOLO IN SANATORIA] Trattandosi di intervento con impatto volumetrico o alterazione della sagoma (es. ampliamenti, chiusura di logge), l'opera si configura come Ristrutturazione Edilizia/Nuova Costruzione. La sanatoria richiedera' un Accertamento di Conformita' ex Art. 36 o Art. 36-bis del D.P.R. 380/01 (PdC in Sanatoria).")
 
-    # 2. Doppia conformità / Salva Casa
-    if not (interna.startswith("A") and esterna.startswith("A")):
+    # 2. Normativa Salva Casa (Esclusa per Catasto)
+    if not is_solo_catasto and not is_tolleranze:
         testo_relazione.append("[CRITERIO DI CONFORMITA'] Alla luce del recente D.L. 69/2024 (L. 105/2024 'Salva Casa'), si applichera' il regime semplificato dell'accertamento di conformita'. Il tecnico asseverera' la conformita' urbanistica alla disciplina vigente al momento della presentazione della domanda, e la conformita' edilizia ai requisiti prescritti all'epoca della realizzazione dell'intervento, superando il previgente vincolo rigido della 'doppia conformita'.")
 
-    # 3. Strutture e Sismica
-    if interna.startswith("D"):
-        testo_relazione.append("[PROFILO STRUTTURALE E SISMICO] Le opere contestate hanno interessato elementi strutturali portanti. L'accertamento di conformita' e' subordinato alla redazione di un Certificato di Idoneita' Statica (CIS) o al deposito in sanatoria presso l'ex Genio Civile, ai sensi del D.P.R. 380/01 e delle NTC 2018.")
+    # 3. Resto delle casistiche (Solo se non e' Catasto)
+    if not is_solo_catasto:
+        if interna.startswith("D"):
+            testo_relazione.append("[PROFILO STRUTTURALE E SISMICO] Le opere contestate hanno interessato elementi strutturali portanti. L'accertamento di conformita' e' subordinato alla redazione di un Certificato di Idoneita' Statica (CIS) o al deposito in sanatoria presso l'ex Genio Civile, ai sensi del D.P.R. 380/01 e delle NTC 2018.")
+        
+        if vincolo == "SI":
+            testo_relazione.append("[VINCOLO PAESAGGISTICO] Ricadendo l'immobile in area sottoposta a vincolo, l'iter di sanatoria e' subordinato all'ottenimento dell'Accertamento di Compatibilita' Paesaggistica ex art. 167 del D.Lgs. 42/2004, comportante il versamento di un'autonoma sanzione paesaggistica.")
+        
+        if esterna.startswith("B") or esterna.startswith("C"):
+            testo_relazione.append("[PROFILO ARCHITETTONICO E INVOLUCRO] La modifica delle forometrie o l'aumento di volume costituisce alterazione dei prospetti. L'intervento richiedera' la verifica dei rapporti aeroilluminanti aggiornati e le verifiche di legge sul contenimento energetico (ex L. 10/91 e D.Lgs. 192/05) per l'involucro edilizio.")
+        elif esterna.startswith("D"):
+            testo_relazione.append("[MODIFICHE ESTERNE / ART. 34-BIS] La modifica di sagoma rilevata e/o il minor volume rientrano nel campo di applicazione dell'Art. 34-bis del D.P.R. 380/01. L'intervento esterno sara' asseverato come tolleranza esecutiva, mantenendo i requisiti di decoro architettonico, senza configurare violazione edilizia per la porzione esterna.")
+        
+        if dico in ["NO", "NON LO SO"]:
+            testo_relazione.append("[IMPIANTI] Stante l'assenza (o la non certezza) delle Dichiarazioni di Conformita' (DICO) originarie, ai fini della successiva SCA sara' indispensabile redigere apposite Dichiarazioni di Rispondenza (DiRi) per gli impianti presenti, avvalendosi di impiantisti abilitati.")
+        
+        if deroga == "SI":
+            testo_relazione.append("[DEROGHE IGIENICO-SANITARIE] Le difformita' presentano locali con altezze inferiori a 2,70m e/o superfici inferiori ai minimi del D.M. 1975. Si procedera' con asseverazione specifica ai sensi delle deroghe introdotte dalla L. 105/2024, attestando in ogni caso il rispetto dei requisiti di aeroilluminazione e salubrita'.")
+        
+        if cambio_uso == "SI":
+            testo_relazione.append("[DESTINAZIONE D'USO] E' presente un mutamento di destinazione d'uso senza opere. L'asseverazione dovra' comprovare l'ammissibilita' dell'uso attuale secondo lo strumento urbanistico vigente, tenendo conto delle agevolazioni introdotte dal Decreto Salva Casa.")
+        
+        if not is_tolleranze:
+            testo_relazione.append(f"[AGGIORNAMENTO CATASTALE] A conclusione dell'iter edilizio di sanatoria, si rendera' necessario l'aggiornamento della planimetria catastale mediante procedura Docfa, per l'esatta rappresentazione in vista del rogito. L'aggiornamento interessera' n. {int(unita)} unita' immobiliare/i.")
 
-    # 4. Paesaggistica
-    if vincolo == "SI":
-        testo_relazione.append("[VINCOLO PAESAGGISTICO] Ricadendo l'immobile in area sottoposta a vincolo, l'iter di sanatoria e' subordinato all'ottenimento dell'Accertamento di Compatibilita' Paesaggistica ex art. 167 del D.Lgs. 42/2004, comportante il versamento di un'autonoma sanzione paesaggistica.")
-
-    # 5. Prospetti, Facciate e Tolleranze esterne
-    if esterna.startswith("B") or esterna.startswith("C"):
-        testo_relazione.append("[PROFILO ARCHITETTONICO E INVOLUCRO] La modifica delle forometrie o l'aumento di volume costituisce alterazione dei prospetti. L'intervento richiedera' la verifica dei rapporti aeroilluminanti aggiornati e le verifiche di legge sul contenimento energetico (ex L. 10/91 e D.Lgs. 192/05) per l'involucro edilizio.")
-    elif esterna.startswith("D"):
-        testo_relazione.append("[MODIFICHE ESTERNE / ART. 34-BIS] La modifica di sagoma rilevata e/o il minor volume rientrano nel campo di applicazione dell'Art. 34-bis del D.P.R. 380/01. L'intervento esterno sara' asseverato come tolleranza esecutiva, mantenendo i requisiti di decoro architettonico, senza configurare violazione edilizia per la porzione esterna.")
-
-    # 6. Agibilità e Impianti
-    if dico in ["NO", "NON LO SO"]:
-        testo_relazione.append("[IMPIANTI] Stante l'assenza (o la non certezza) delle Dichiarazioni di Conformita' (DICO) originarie, ai fini della successiva SCA sara' indispensabile redigere apposite Dichiarazioni di Rispondenza (DiRi) per gli impianti presenti, avvalendosi di impiantisti abilitati.")
-
-    # 7. Deroghe igienico sanitarie
-    if deroga == "SI":
-        testo_relazione.append("[DEROGHE IGIENICO-SANITARIE] Le difformita' presentano locali con altezze inferiori a 2,70m e/o superfici inferiori ai minimi del D.M. 1975. Si procedera' con asseverazione specifica ai sensi delle deroghe introdotte dalla L. 105/2024, attestando in ogni caso il rispetto dei requisiti di aeroilluminazione e salubrita'.")
-
-    # 8. Cambio Destinazione d'Uso
-    if cambio_uso == "SI":
-        testo_relazione.append("[DESTINAZIONE D'USO] E' presente un mutamento di destinazione d'uso senza opere. L'asseverazione dovra' comprovare l'ammissibilita' dell'uso attuale secondo lo strumento urbanistico vigente, tenendo conto delle agevolazioni introdotte dal Decreto Salva Casa.")
-
-    # 9. Catasto
-    if not (interna.startswith("A") and esterna.startswith("A")):
-        testo_relazione.append(f"[AGGIORNAMENTO CATASTALE] A conclusione dell'iter edilizio di sanatoria, si rendera' necessario l'aggiornamento della planimetria catastale mediante procedura Docfa, per l'esatta rappresentazione in vista del rogito. L'aggiornamento interessera' n. {int(unita)} unita' immobiliare/i.")
+    # Paragrafo CDU (indipendente dalla pratica)
+    if CDU == "SI":
+        testo_relazione.append("[CERTIFICATO DESTINAZIONE URBANISTICA] Ai fini della stipula dell'atto notarile, si procedera' alla richiesta del Certificato di Destinazione Urbanistica (CDU) per l'inquadramento delle aree scoperte o pertinenze interessate dal trasferimento immobiliare.")
         
     pdf.set_font("Arial", '', 10)
     for paragrafo in testo_relazione:
@@ -359,8 +384,11 @@ with col_output:
     st.success(f"**TOTALE PREVENTIVO SPESE TECNICHE:** € {tot_tecnico_lordo:,.2f}")
     
     st.divider()
-    st.warning("⚠️ **STIMA SANZIONE AMMINISTRATIVA (OBLAZIONE COMUNALE)**\n\n*ATTENZIONE: La stima in caso di ampliamento è calcolata ex. Art. 36 DPR 380/01 sui Mq aggiunti.*")
-    st.error(f"**Stima Oblazione F24 (Da versare al Comune):** € {sanzione:,.2f}")
+    if is_solo_catasto or is_tolleranze:
+        st.success("✅ **Sanzione Amministrativa NON DOVUTA** (Pratica senza opere abusive in sanatoria).")
+    else:
+        st.warning("⚠️ **STIMA SANZIONE AMMINISTRATIVA (OBLAZIONE COMUNALE)**\n\n*ATTENZIONE: La stima in caso di ampliamento è calcolata ex. Art. 36 DPR 380/01 sui Mq aggiunti.*")
+        st.error(f"**Stima Oblazione F24 (Da versare al Comune):** € {sanzione:,.2f}")
     
     st.markdown(f"""
         <div style='background-color: #10B981; padding: 15px; border-radius: 5px; text-align: center; border: 1px solid #BFBFBF;'>
@@ -506,8 +534,7 @@ Dati Catastali: Fg.{foglio} Map.{mappale} Sub.{subalterno}
 9. Mq Ampliati: {mq_ampliamento} Mq
 10. Accesso agli atti fatto: {accesso_fatto}
 11. Prezzo di vendita: {prezzo_vendita:,.2f} Euro
-12. CDU fatto: {serve_CDU}
-
+12. Serve CDU: {CDU}
 
 --- RIEPILOGO TECNICO E COSTI ---
 Titolo Edilizio Stimato: {titolo}
