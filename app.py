@@ -437,22 +437,22 @@ with col_output:
     st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
     
     # --- RIGUADRO FISSO: NOTE ED ESCLUSIONI A SCHERMO ---
-        st.markdown(f"""
-    <div style='background-color: #F8F9FA; padding: 15px; border-radius: 5px; border: 1px solid #DEE2E6;'>
-        <p style='margin-bottom: 5px;'><strong>📌 NOTE:</strong></p>
-        <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
-            <li><strong>Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.</strong></li>
-            <li>E' previsto un acconto di {acconto_str} euro (iva inclusa) all'accettazione del preventivo formale.</li>
-        </ul>
-        <p style='margin-bottom: 5px;'><strong>🚫 ESCLUSIONI (Salvo diversa pattuizione):</strong></p>
-        <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
-            <li>Rilievi e indagini geologiche o geotecniche;</li>
-            <li>Pratiche di allacciamento o autorizzazione con terzi enti;</li>
-            <li>Eventuali saggi murari o strutturali invasivi;</li>
-            <li>Pratiche VIA, VAS, VINCA;</li>
-            <li>Frazionamento e/o accorpamenti immobiliari.</li>
-        </ul>
-    </div>
+    st.markdown(f"""
+        <div style='background-color: #F8F9FA; padding: 15px; border-radius: 5px; border: 1px solid #DEE2E6;'>
+            <p style='margin-bottom: 5px;'><strong>📌 NOTE:</strong></p>
+            <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
+                <li><strong>Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.</strong></li>
+                <li>E' previsto un acconto di {acconto_str} euro (iva inclusa) all'accettazione del preventivo formale.</li>
+            </ul>
+            <p style='margin-bottom: 5px;'><strong>🚫 ESCLUSIONI (Salvo diversa pattuizione):</strong></p>
+            <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
+                <li>Rilievi e indagini geologiche o geotecniche;</li>
+                <li>Pratiche di allacciamento o autorizzazione con terzi enti;</li>
+                <li>Eventuali saggi murari o strutturali invasivi;</li>
+                <li>Pratiche VIA, VAS, VINCA;</li>
+                <li>Frazionamento e/o accorpamenti immobiliari.</li>
+            </ul>
+        </div>
     """, unsafe_allow_html=True)
     
     # --- BOTTONI DI DOWNLOAD PDF ---
