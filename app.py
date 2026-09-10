@@ -33,9 +33,9 @@ st.markdown(nascondi_menu_style, unsafe_allow_html=True)
 # ---- PARAMETRI E COSTI (Letti fedelmente dal tuo Excel rev1) ----
 COSTI = {
     "base_cila": 1200,
-    "add_pdc": 300,
+    "add_pdc": 400,
     "volumi": 2500,
-    "paesaggistica": 600,
+    "paesaggistica": 800,
     "statica": 1000,
     "involucro": 1200,
     "agibilita": 350,
@@ -135,6 +135,7 @@ is_pdc = is_scia = is_cila = is_solo_catasto = is_tolleranze = False
 if not form_compilato:
     titolo = "In attesa di dati..."
     tot_imponibile = tot_art15 = cassa = iva = tot_tecnico_lordo = sanzione = totale_chiavi_in_mano = 0.0
+    acconto_str = "0,00"
     df = pd.DataFrame(columns=["Voce", "Imponibile", "Art. 15"])
 else:
     is_pdc = esterna.startswith("C")
@@ -225,6 +226,8 @@ else:
         sanzione = COSTI["sanzione_minima"]
 
     totale_chiavi_in_mano = tot_tecnico_lordo + sanzione
+    acconto = tot_tecnico_lordo * 0.30
+    acconto_str = f"{acconto:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # ---- FUNZIONE 1: PDF PREVENTIVO AGENTE ----
 def genera_pdf():
@@ -305,7 +308,7 @@ def genera_pdf():
     
     # Riga 2: Testo normale
     pdf.set_font("Arial", '', 9)
-    pdf.cell(0, 5, "- E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale.", ln=True)
+    pdf.cell(0, 5, f"- E' previsto un acconto di {acconto_str} euro (iva inclusa) all'accettazione del preventivo formale.", ln=True)
     
     pdf.ln(3)
     
@@ -434,12 +437,12 @@ with col_output:
     st.info(f"📈 **Incidenza della Sanatoria sul Prezzo di Vendita:** {incidenza_perc:.2f}%", icon="⚖️")
     
     # --- RIGUADRO FISSO: NOTE ED ESCLUSIONI A SCHERMO ---
-    st.markdown("""
+        st.markdown(f"""
     <div style='background-color: #F8F9FA; padding: 15px; border-radius: 5px; border: 1px solid #DEE2E6;'>
         <p style='margin-bottom: 5px;'><strong>📌 NOTE:</strong></p>
         <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
-            <li><strong>Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.</li>
-            <li>E' previsto un acconto di 600,00 euro (iva inclusa) all'accettazione del preventivo formale.</li>
+            <li><strong>Il rilievo dello stato di fatto viene eseguito con strumentazione laser scanner 3D SLAM.</strong></li>
+            <li>E' previsto un acconto di {acconto_str} euro (iva inclusa) all'accettazione del preventivo formale.</li>
         </ul>
         <p style='margin-bottom: 5px;'><strong>🚫 ESCLUSIONI (Salvo diversa pattuizione):</strong></p>
         <ul style='margin-top: 0; padding-left: 20px; font-size: 14px;'>
