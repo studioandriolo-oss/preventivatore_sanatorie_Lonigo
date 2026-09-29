@@ -32,22 +32,22 @@ st.markdown(nascondi_menu_style, unsafe_allow_html=True)
 
 # ---- PARAMETRI E COSTI (Letti fedelmente dal tuo Excel rev1) ----
 COSTI = {
-    "base_cila": 1200,
-    "add_pdc": 400,
-    "volumi": 2500,
-    "paesaggistica": 800,
-    "statica": 1000,
-    "involucro": 1200,
+    "base_cila": 1500,
+    "add_pdc": 1000,
+    "volumi": 3500,
+    "paesaggistica": 1200,
+    "statica": 1500,
+    "involucro": 1500,
     "agibilita": 350,
     "diri": 1200,
-    "mq_medio": 300,
-    "mq_grande": 600,
-    "cambio_uso": 800,
+    "mq_medio": 600,
+    "mq_grande": 1200,
+    "cambio_uso": 1500,
     "deroga_salvacasa": 500,
-    "accesso_atti": 90,
+    "accesso_atti": 150,
     "sanzione_minima": 1032,
-    "moltiplicatore_ampliamento": 124,
-    "CDU": 80
+    "moltiplicatore_ampliamento": 250,
+    "CDU": 150
 }
 
 DIRITTI = {
